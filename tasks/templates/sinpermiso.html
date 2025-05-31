@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Denegado - OceanTrack</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/materialize.min.css' %}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+            background-color: #f5f5f5;
+        }
+        main {
+            flex: 1 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-card {
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+        }
+        .error-icon {
+            font-size: 80px;
+            color: #ef5350; /* Rojo Materialize */
+            margin-bottom: 20px;
+        }
+        .btn-large {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    
+    <main>
+        <div class="container">
+            <div class="row">
+                <div class="col s12 m8 offset-m2 l6 offset-l3">
+                    <div class="card error-card">
+                        <i class="material-icons error-icon">lock_outline</i>
+                        <span class="card-title black-text">Acceso Denegado</span>
+                        <p class="black-text flow-text">{{ message }}</p>
+                        <p class="grey-text">Usuario actual: {{ username }}</p>
+                        <a href="{% url 'home' %}" class="waves-effect waves-light btn-large blue darken-1">
+                            <i class="material-icons left">arrow_back</i> Volver al inicio
+                        </a>
+                        {% if request.session.user_role %}
+                            <p style="margin-top: 20px;">
+                                <a href="{% url 'logout' %}"   class="waves-effect waves-light btn red lighten-1">Cerrar Sesión</a>
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="{% static 'js/materialize.min.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            M.AutoInit(); // Inicializa componentes Materialize
+        });
+    </script>
+</body>
+</html>

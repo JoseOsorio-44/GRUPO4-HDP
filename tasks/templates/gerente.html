@@ -1,0 +1,421 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <meta charset="UTF-8">
+    <title>OceanTrack - Gerente</title>
+    <link rel="stylesheet" href="{% static 'css/materialize.min.css' %}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        .tabla-gerentes {
+            margin-top: 20px;
+        }
+        .tabla-gerentes tr.selected {
+            background-color: #e3f2fd !important; /* Materialize Light Blue accent-1 */
+        }
+        #btnEditarGerente {
+            display: none; /* Oculto por defecto hasta que se seleccione una fila */
+        }
+        .toast.red {
+            background-color: #ef5350 !important; /* Rojo de Materialize */
+        }
+        .toast.green {
+            background-color: #66bb6a !important; /* Verde de Materialize */
+        }
+        .toast.blue.darken-1 {
+            background-color: #1976d2 !important; /* Azul oscuro de Materialize (Navbar) */
+        }
+        .toast.light-blue {
+            background-color: #29b6f6 !important; /* Azul claro de Materialize */
+        }
+        .toast.light-green {
+            background-color: #8bc34a !important; /* Verde claro de Materialize */
+        }
+
+        /* ESTILOS CLAVE PARA EL ÍCONO DE VISIBILIDAD DE CONTRASEÑA */
+        .input-field {
+            position: relative; /* Importante para que el ícono absoluto se posicione respecto a este div */
+        }
+        .input-field .toggle-password {
+            position: absolute;
+            right: 0;
+            top: 10px; /* AJUSTA ESTE VALOR EN PIXELES (ej. 20px, 22px, 25px) HASTA QUE QUEDE ALINEADO VERTICALMENTE */
+            cursor: pointer;
+            color: #9e9e9e; /* Color del ícono */
+            z-index: 2; /* Asegura que esté por encima de la etiqueta y el input */
+        }
+        .input-field input:focus + label + .toggle-password {
+            color: #2196F3; /* Cambia a azul cuando el input está enfocado */
+        }
+
+        /* OCULTAR EL ÍCONO NATIVO DEL NAVEGADOR PARA CAMPOS DE TIPO PASSWORD */
+        /* Esto puede requerir prefijos de navegador y puede no funcionar en todos los casos */
+        input[type="password"]::-ms-reveal, /* Para Internet Explorer/Edge antiguo */
+        input[type="password"]::-webkit-reveal-password-button { /* Para Chrome, Edge, Safari */
+            display: none !important;
+            -webkit-appearance: none; /* Asegura que no haya estilos adicionales del navegador */
+        }
+
+        /* Puedes agregar también el "clear button" si te aparece */
+        input[type="password"]::-ms-clear,
+        input[type="password"]::-webkit-contacts-auto-fill-button {
+            display: none !important;
+            -webkit-appearance: none;
+        }
+
+
+            .tabla-gerentes table {
+        table-layout: fixed; /* Esto fuerza a la tabla a respetar los anchos de columna */
+        width: 100%; /* Asegura que la tabla ocupe el ancho completo disponible */
+    }
+
+    .tabla-gerentes th,
+    .tabla-gerentes td {
+        text-align: left; /* Alinea todo el texto a la izquierda, incluyendo los encabezados */
+        padding: 12px 15px; /* Materialize por defecto */
+        vertical-align: middle; /* Alinea verticalmente el contenido de las celdas */
+    }
+
+    /* Ajuste de anchos para cada columna (experimenta con los porcentajes) */
+    .tabla-gerentes th:nth-child(1), /* Columna del ícono */
+    .tabla-gerentes td:nth-child(1) {
+        width: 5%; /* Pequeño ancho para el ícono */
+        text-align: center; /* Centra el ícono */
+    }
+
+    .tabla-gerentes th:nth-child(2), /* Columna Nombre */
+    .tabla-gerentes td:nth-child(2) {
+        width: 40%; /* Ajusta el ancho para el nombre */
+    }
+
+    .tabla-gerentes th:nth-child(3), /* Columna Carnet/Usuario */
+    .tabla-gerentes td:nth-child(3) {
+        width: 20%; /* Ajusta el ancho para el usuario/carnet */
+    }
+    
+    .tabla-gerentes th:nth-child(4), /* Columna Email */
+    .tabla-gerentes td:nth-child(4) {
+        width: 40%; /* Ajusta el ancho para el email (el resto) */
+    }
+
+        
+    </style>
+</head>
+
+<body>
+    <script src="{% static 'js/materialize.min.js' %}"></script>
+
+    <nav class="blue darken-1">
+        <div class="nav-wrapper">
+            <a href="#!" class="brand-logo"></a>
+            <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-left:14px; margin-top:6px;">
+            <span style="margin-left: 10px; font-size: 2.5rem; position: relative; top: -14px;">OceanTrack</span>
+            <ul class="right hide-on-med-and-down">
+                <li><a href="{% url 'buques' %}"><i class="material-icons left">directions_boat</i>Navios</a></li>
+                <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row" style="margin-top: 20px;">
+            <div class="col s12 m6">
+                <div class="input-field">
+                    <i class="material-icons prefix">search</i>
+                    <input id="search" type="text" placeholder="Buscar gerente">
+                    <label for="search">Buscar</label>
+                </div>
+            </div>
+
+            <div class="col s12 m6">
+                <div class="right-align">
+                    <a id="btnEditarGerente" class="waves-effect waves-light btn blue">
+                        <i class="material-icons left">search</i>Ver informacion
+                    </a>
+                    <a class="waves-effect waves-light btn teal modal-trigger" href="#modalGerente">
+                        <i class="material-icons left">add</i>Agregar Gerente
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row tabla-gerentes">
+            <div class="col s12">
+                <table class="highlight">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Nombre</th>
+                            <th>Carnet</th>
+                            
+                            <th>Email</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaGerentes">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalGerente" class="modal">
+        <div class="modal-content">
+            <h5 id="modalTitulo">Agregar gerente</h5>
+            <form id="formGerente" action="{% url 'api_gerente_list_create' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" id="gerenteId">
+
+                <div class="input-field">
+                    <input id="nombreGerente" name="nombre" type="text" required>
+                    <label for="nombreGerente">Nombre del gerente</label>
+                </div>
+
+                <div class="input-field">
+                    <input id="usuarioGerente" name="usuario" type="text" required>
+                    <label for="usuarioGerente">Nombre de usuario</label>
+                </div>
+
+                <div class="input-field">
+                    <input id="passGerente" name="password" type="password">
+                    <label for="passGerente">Contraseña</label>
+                    <span toggle="#passGerente" class="material-icons prefix right field-icon toggle-password">visibility</span>
+                </div>
+
+                <div class="input-field">
+                    <input id="emailGerente" name="email" type="email" required>
+                    <label for="emailGerente">Email</label>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+             <a id="btnEliminarGerente" class="waves-effect waves-light btn red left" style="display: none;">
+             <i class="material-icons left">delete</i>Eliminar
+             </a>
+            <button type="submit" form="formGerente" class="waves-effect waves-light btn">
+                <span id="btnAccion">Registrar</span>
+            </button>
+            <a href="#!" class="modal-close waves-effect btn-flat">Cancelar</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modales = document.querySelectorAll('.modal');
+            M.Modal.init(modales);
+
+            axios.defaults.xsrfCookieName = 'csrftoken';
+            axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+            let gerentes = [];
+            let gerenteSeleccionado = null;
+
+            const tablaGerentes = document.getElementById('tablaGerentes');
+            const formGerente = document.getElementById('formGerente');
+            const btnEditar = document.getElementById('btnEditarGerente');
+            const modalTitulo = document.getElementById('modalTitulo');
+            const btnAccion = document.getElementById('btnAccion');
+            const gerenteIdInput = document.getElementById('gerenteId');
+            const passGerenteInput = document.getElementById('passGerente');
+            const btnEliminar = document.getElementById('btnEliminarGerente'); 
+            
+            const togglePasswordIcons = document.querySelectorAll('.toggle-password'); 
+
+            cargarGerentes();
+
+            tablaGerentes.addEventListener('click', function(e) {
+                const fila = e.target.closest('tr');
+                if (!fila) return;
+
+                document.querySelectorAll('#tablaGerentes tr').forEach(row => {
+                    row.classList.remove('selected');
+                });
+
+                fila.classList.add('selected');
+                gerenteSeleccionado = gerentes.find(g => g.id == fila.dataset.id);
+
+                btnEditar.style.display = 'inline-block';
+            });
+
+            btnEditar.addEventListener('click', function() {
+                if (!gerenteSeleccionado) return;
+
+                modalTitulo.textContent = 'Informacion del gerente';
+                btnAccion.textContent = 'Actualizar';
+                btnEliminar.style.display = 'inline-block';
+
+                gerenteIdInput.value = gerenteSeleccionado.id;
+                document.getElementById('nombreGerente').value = gerenteSeleccionado.nombre.trim();
+                document.getElementById('usuarioGerente').value = gerenteSeleccionado.usuario.trim();
+                
+                // **** CAMBIO AQUI: PRE-RELLENAR LA CONTRASEÑA ****
+                // Asume que gerenteSeleccionado.contrasenia contiene el valor que quieres mostrar.
+                passGerenteInput.value = gerenteSeleccionado.contrasenia.trim(); 
+                
+                document.getElementById('emailGerente').value = gerenteSeleccionado.email.trim();
+
+                // RESTABLECER TIPO DE INPUT DE CONTRASEÑA Y ÍCONO
+                passGerenteInput.type = 'password'; 
+                const currentToggleIcon = passGerenteInput.parentElement.querySelector('.toggle-password');
+                if (currentToggleIcon) {
+                    currentToggleIcon.textContent = 'visibility';
+                }
+
+                M.updateTextFields(); // CLAVE PARA QUE MATERIALIZE ACTUALICE EL ESTADO DE LOS LABELS
+
+                const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
+                modal.open();
+            });
+
+            btnEliminar.addEventListener('click', function() {
+            if (!gerenteSeleccionado) return;
+  
+            if (confirm(`¿Estás seguro de eliminar al gerente ${gerenteSeleccionado.nombre}?`)) {
+             axios.delete(`/api/gerentes/${gerenteSeleccionado.id}/`)
+                .then(response => {
+                    M.toast({html: 'Gerente eliminado exitosamente', classes: 'green'});
+                    const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
+                    modal.close();
+                    cargarGerentes();
+            })
+                .catch(error => {
+                    console.error('Error eliminando gerente:', error);
+                    M.toast({html: 'Error al eliminar gerente', classes: 'red'});
+            });
+            }
+            });
+
+            // LÓGICA PARA ALTERNAR VISIBILIDAD DE LA CONTRASEÑA (APLICADO A CADA ÍCONO)
+            togglePasswordIcons.forEach(icon => { 
+                icon.addEventListener('click', function() {
+                    const targetId = this.getAttribute('toggle');
+                    const inputToToggle = document.querySelector(targetId);
+
+                    if (inputToToggle) { 
+                        const type = inputToToggle.getAttribute('type') === 'password' ? 'text' : 'password';
+                        inputToToggle.setAttribute('type', type);
+                        this.textContent = (type === 'password') ? 'visibility' : 'visibility_off';
+                    } else {
+                        console.error("Error: No se encontró el input de contraseña para alternar la visibilidad.");
+                    }
+                });
+            });
+
+            formGerente.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const nombre = document.getElementById('nombreGerente').value.trim();
+                const usuario = document.getElementById('usuarioGerente').value.trim();
+                const password = passGerenteInput.value.trim(); // Obtener la contraseña del input
+                const email = document.getElementById('emailGerente').value.trim();
+                const id = gerenteIdInput.value;
+
+                if (!nombre || !usuario || (!password && !id) || !email) {
+                    M.toast({html: 'Todos los campos son obligatorios (excepto contraseña en edición si no se cambia)', classes: 'red'});
+                    return;
+                }
+
+                const gerenteData = {
+                    nombre: nombre,
+                    usuario: usuario,
+                    password: password || undefined, // Envía la contraseña o undefined si está vacía
+                    email: email,
+                    tipo_usuario: 'gerente'
+                };
+
+                const metodo = id ? 'put' : 'post';
+                const url = id ? `/api/gerentes/${id}/` : '/api/gerentes/';
+
+                axios({
+                    method: metodo,
+                    url: url,
+                    data: gerenteData
+                })
+                .then(response => {
+                    M.toast({html: `Gerente ${id ? 'actualizado' : 'registrado'} exitosamente`, classes: 'green'});
+                    const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
+                    modal.close();
+                    formGerente.reset(); 
+                    M.updateTextFields(); 
+                    cargarGerentes();
+                })
+                .catch(error => {
+                    console.error('Error en la operación del gerente:', error.response ? error.response.data : error.message);
+                    M.toast({html: `Error al ${id ? 'actualizar' : 'registrar'} gerente: ` +
+                        (error.response?.data?.error || 'Verifique la consola para detalles'),
+                        classes: 'red'});
+                });
+            });
+
+            function cargarGerentes() {
+                axios.get('/api/gerentes/')
+                    .then(response => {
+                        gerentes = response.data;
+                        renderizarTabla();
+                    })
+                    .catch(error => {
+                        console.error('Error cargando gerentes:', error.response ? error.response.data : error.message);
+                        M.toast({html: 'Error al cargar gerentes', classes: 'red'});
+                    });
+            }
+
+            function renderizarTabla() {
+                tablaGerentes.innerHTML = gerentes.map(gerente => `
+                    <tr data-id="${gerente.id}">
+                        <td><i class="material-icons">person</i></td>
+                        <td>${gerente.nombre}</td>
+                        <td>${gerente.usuario}</td>
+                        
+                        <td>${gerente.email}</td>
+                    </tr>
+                `).join('');
+
+                gerenteSeleccionado = null;
+                btnEditar.style.display = 'none'; 
+            }
+
+            document.querySelector('a[href="#modalGerente"].modal-trigger').addEventListener('click', function() {
+                modalTitulo.textContent = 'Agregar gerente';
+                btnAccion.textContent = 'Registrar';
+                btnEliminar.style.display = 'none'
+                formGerente.reset();
+                gerenteIdInput.value = '';
+                
+                passGerenteInput.type = 'password'; 
+                const currentToggleIcon = passGerenteInput.parentElement.querySelector('.toggle-password');
+                if (currentToggleIcon) {
+                    currentToggleIcon.textContent = 'visibility';
+                }
+
+                M.updateTextFields(); // ASEGURA QUE LAS ETIQUETAS SE RESETEARON
+            });
+
+            document.getElementById('search').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const filteredGerentes = gerentes.filter(gerente =>
+                    gerente.nombre.toLowerCase().includes(searchTerm) ||
+                    gerente.usuario.toLowerCase().includes(searchTerm) ||
+                    gerente.email.toLowerCase().includes(searchTerm)
+                );
+                renderizarTablaFiltrada(filteredGerentes);
+            });
+
+            function renderizarTablaFiltrada(data) {
+                tablaGerentes.innerHTML = data.map(gerente => `
+                    <tr data-id="${gerente.id}">
+                        <td><i class="material-icons">person</i></td>
+                        <td>${gerente.nombre}</td>
+                        <td>${gerente.usuario}</td>
+                      
+                        <td>${gerente.email}</td>
+                    </tr>
+                `).join('');
+                gerenteSeleccionado = null;
+                btnEditar.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
