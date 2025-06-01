@@ -38,7 +38,7 @@
             <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-left:14px; margin-top:6px;">
             <span style="margin-left: 10px; font-size: 2.5rem; position: relative; top: -14px;">OceanTrack</span>
             <ul class="right hide-on-med-and-down">
-                <li><a href="{% url 'completo' %}"><i class="material-icons left">people</i>Gerentes</a></li>
+                <li><a href="{% url 'admin_view' %}"><i class="material-icons left">people</i>Gerentes</a></li>
                 <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
             </ul>
         </div>
@@ -79,7 +79,7 @@
                         </tr>
                     </thead>
                     <tbody id="tablaNavios">
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
@@ -90,16 +90,16 @@
             <h5 id="modalTitulo"></h5> 
             <form id="formNavio" action="" method="post">
                 {% csrf_token %}
-                <input type="hidden" id="navioId">
+                <input type="hidden" id="navioMatricula"> 
                 
                 <div class="input-field">
-                    <input id="nombreNavio" name="nombre_buque" type="text" required>
-                    <label for="nombreNavio">Nombre del navío</label>
+                    <input id="matriculaBuque" name="matricula_buque" type="text" required>
+                    <label for="matriculaBuque">Matrícula</label>
                 </div>
 
                 <div class="input-field">
-                    <input id="matriculaNavio" name="matricula" type="text" required>
-                    <label for="matriculaNavio">Matrícula</label>
+                    <input id="nombreNavio" name="nombre_buque" type="text" required>
+                    <label for="nombreNavio">Nombre del navío</label>
                 </div>
 
                 <div class="input-field">
@@ -141,7 +141,7 @@
             axios.defaults.xsrfHeaderName = 'X-CSRFToken';
 
             // Variables globales
-            let navios = [];
+            let navios = []; // Almacena TODOS los navíos cargados inicialmente del backend
             let gerentes = [];
             let navioSeleccionado = null; 
 
@@ -152,11 +152,12 @@
             const btnInventario = document.getElementById('btnInventario');
             const modalTitulo = document.getElementById('modalTitulo');
             const btnAccion = document.getElementById('btnAccion');
-            const navioIdInput = document.getElementById('navioId');
+            const navioMatriculaInput = document.getElementById('navioMatricula'); 
             const selectGerente = document.getElementById('gerenteNavio');
             const btnEliminar = document.getElementById('btnEliminarNavio');
             const searchInput = document.getElementById('search');
             const btnAgregarNavio = document.getElementById('btnAgregarNavio'); 
+            const matriculaBuqueInput = document.getElementById('matriculaBuque');
 
             const modalNavioInstance = M.Modal.getInstance(document.getElementById('modalNavio')); 
 
@@ -169,7 +170,7 @@
             tablaNavios.addEventListener('click', function(e) {
                 console.log('Click en tabla de navíos.');
                 const fila = e.target.closest('tr'); 
-                if (!fila || fila.classList.contains('no-data-row')) {
+                if (!fila || fila.classList.contains('no-data-row')) { // Asegura que no se seleccione la fila de "no data"
                     resetSeleccion(); 
                     console.log('Click fuera de fila válida o en fila "no data". Reseteando selección.');
                     return;
@@ -183,8 +184,8 @@
                 // Seleccionar la fila actual
                 fila.classList.add('selected');
 
-                // Encontrar el objeto navío completo basado en el data-id de la fila
-                navioSeleccionado = navios.find(n => String(n.id_buque) === fila.dataset.id); 
+                // Encontrar el objeto navío completo basado en la data-matricula de la fila
+                navioSeleccionado = navios.find(n => String(n.matricula_buque) === fila.dataset.matricula); 
 
                 console.log('Navío seleccionado:', navioSeleccionado);
 
@@ -225,7 +226,7 @@
                     M.toast({html: 'Por favor, seleccione un navío para ver su inventario.', classes: 'orange'});
                     return;
                 }
-                window.location.href = `inventario/${navioSeleccionado.id_buque}/`; 
+                window.location.href = `inventario/${navioSeleccionado.matricula_buque}/`; 
             });
 
             // Botón eliminar navío
@@ -237,7 +238,7 @@
                 }
 
                 if (confirm(`¿Estás seguro de eliminar el navío "${navioSeleccionado.nombre_buque}"? Esta acción es irreversible.`)) {
-                    axios.delete(`/api/navios/${navioSeleccionado.id_buque}/`) 
+                    axios.delete(`/api/navios/${navioSeleccionado.matricula_buque}/`) 
                         .then(() => {
                             M.toast({html: 'Navío eliminado correctamente', classes: 'green'});
                             modalNavioInstance.close(); 
@@ -256,28 +257,27 @@
                 event.preventDefault(); 
                 console.log('Formulario enviado.');
 
-                const id = navioIdInput.value; 
+                const matriculaOriginalParaPut = navioMatriculaInput.value; 
+                
                 const datos = {
                     nombre_buque: document.getElementById('nombreNavio').value.trim(),
-                    matricula: document.getElementById('matriculaNavio').value.trim(),
+                    matricula_buque: matriculaBuqueInput.value.trim(), 
                     servicio: document.getElementById('servicioNavio').value.trim() || null, 
-                    // Se envía 'gerente' al backend, no 'id_gerente'
-                    gerente: selectGerente.value ? parseInt(selectGerente.value) : null, 
+                    carnet_gerente: selectGerente.value ? selectGerente.value : null, 
                     id_administrador: null 
                 };
 
                 if (!datos.nombre_buque) { M.toast({html: 'El nombre del navío es obligatorio.', classes: 'red'}); return; }
-                if (!datos.matricula) { M.toast({html: 'La matrícula es obligatoria.', classes: 'red'}); return; }
-                // Modificación en la validación: si el valor es "", también se considera no seleccionado.
-                if (datos.gerente === null || isNaN(datos.gerente) || String(selectGerente.value) === "") { 
+                if (!datos.matricula_buque) { M.toast({html: 'La matrícula es obligatoria.', classes: 'red'}); return; }
+                if (datos.carnet_gerente === null || String(selectGerente.value) === "") { 
                     M.toast({html: 'Debe seleccionar un gerente.', classes: 'red'});
                     return;
                 }
                 
                 console.log('Datos a enviar:', datos); 
 
-                if (id) { 
-                    axios.put(`/api/navios/${id}/`, datos) 
+                if (matriculaOriginalParaPut) { 
+                    axios.put(`/api/navios/${matriculaOriginalParaPut}/`, datos) 
                         .then(response => {
                             M.toast({html: response.data.message || 'Navío actualizado correctamente', classes: 'green'});
                             modalNavioInstance.close(); 
@@ -308,18 +308,17 @@
             function prepararModalParaAgregar() {
                 console.log('Preparando modal para agregar...');
                 formNavio.reset(); 
-                navioIdInput.value = ''; 
+                navioMatriculaInput.value = ''; 
+                matriculaBuqueInput.readOnly = false; 
                 modalTitulo.textContent = 'Agregar navío'; 
                 btnAccion.textContent = 'Registrar'; 
                 btnEliminar.style.display = 'none'; 
                 btnInventario.style.display = 'none'; 
 
-                // Destruir y re-inicializar el select para que muestre la opción por defecto
                 M.FormSelect.getInstance(selectGerente)?.destroy(); 
                 selectGerente.value = ""; 
                 M.FormSelect.init(selectGerente); 
                 
-                // Asegúrate de remover la clase 'active' del label al agregar
                 const labelGerente = document.querySelector('label[for="gerenteNavio"]');
                 if (labelGerente) { 
                     labelGerente.classList.remove('active');
@@ -332,17 +331,16 @@
             function prepararModalParaEditar(navio) {
                 console.log('Preparando modal para editar navío:', navio);
                 modalTitulo.textContent = 'Informacion del navio'; 
-                btnAccion.textContent = 'Actualizar';     
+                btnAccion.textContent = 'Actualizar';    
                 btnEliminar.style.display = 'inline-block'; 
                 btnInventario.style.display = 'inline-block'; 
 
-                navioIdInput.value = navio.id_buque; 
-                document.getElementById('nombreNavio').value = navio.nombre_buque;
-                document.getElementById('matriculaNavio').value = navio.matricula;
-                document.getElementById('servicioNavio').value = navio.servicio || ''; 
+                navioMatriculaInput.value = navio.matricula_buque.trim(); 
+                document.getElementById('nombreNavio').value = navio.nombre_buque.trim();
+                matriculaBuqueInput.value = navio.matricula_buque.trim();
+                matriculaBuqueInput.readOnly = true; 
+                document.getElementById('servicioNavio').value = navio.servicio.trim() || ''; 
                 
-                // --- MANEJO DEL SELECT DE GERENTES AL EDITAR ---
-                // 1. Destruir la instancia existente de Materialize Select.
                 const selectGerenteInstance = M.FormSelect.getInstance(selectGerente);
                 if (selectGerenteInstance) {
                     console.log('Destruyendo instancia Materialize Select.');
@@ -351,19 +349,14 @@
                     console.log('No hay instancia Materialize Select para destruir.');
                 }
 
-                // 2. Establecer el valor del select nativo HTML.
-                // ¡CORREGIDO! Usar navio.gerente en lugar de navio.id_gerente
-                const gerenteId = navio.gerente ? String(navio.gerente) : ""; 
-                selectGerente.value = gerenteId; 
+                const gerenteCarnet = navio.carnet_gerente ? String(navio.carnet_gerente) : ""; 
+                selectGerente.value = gerenteCarnet; 
                 console.log('Valor asignado a selectGerente.value:', selectGerente.value);
                 
-                // 3. Re-inicializar el select de Materialize con el nuevo valor.
                 M.FormSelect.init(selectGerente);
                 console.log('Materialize Select re-inicializado. Valor actual (Materialize internal):', M.FormSelect.getInstance(selectGerente).getSelectedValues());
                 console.log('Opciones actuales del select gerente:', Array.from(selectGerente.options).map(o => ({ value: o.value, text: o.text, selected: o.selected })));
 
-
-                // 4. Forzar que el label del select flote si hay un valor seleccionado
                 const labelGerente = document.querySelector('label[for="gerenteNavio"]');
                 if (labelGerente) { 
                     if (selectGerente.value !== "") {
@@ -397,18 +390,21 @@
                 console.log('Iniciando carga de datos iniciales...');
                 try {
                     const [gerentesResponse, naviosResponse] = await Promise.all([
-                        // ¡CORREGIDO! URL de la API de gerentes
                         axios.get('/api/gerentes/list/'), 
                         axios.get('/api/navios/')
                     ]);
                     
                     gerentes = gerentesResponse.data; 
-                    navios = naviosResponse.data; 
+                    navios = naviosResponse.data; // Almacenamos TODOS los navíos aquí
                     console.log('Gerentes cargados (variable global):', gerentes);
                     console.log('Navíos cargados (variable global):', navios);
 
                     cargarSelectGerentes(); 
-                    cargarTablaNavios(navierosFiltrados()); 
+                    // Cuando se carga la página por primera vez, el filtro está vacío,
+                    // así que 'navierosFiltrados()' devolverá todos los navíos.
+                    // Si 'navios' está vacío, indicamos que no hay nada registrado.
+                    const hayNaviosRegistrados = navios.length > 0; 
+                    cargarTablaNavios(navierosFiltrados(), hayNaviosRegistrados); 
                     resetSeleccion(); 
                     console.log('Datos iniciales cargados y UI actualizada.');
                 } catch (error) {
@@ -422,11 +418,8 @@
             function cargarSelectGerentes() {
                 console.log('Ejecutando cargarSelectGerentes(). Gerentes actuales:', gerentes);
                 
-                // Guarda la opción por defecto
                 const defaultOption = selectGerente.querySelector('option[disabled][selected]');
-                // Limpia todas las opciones
                 selectGerente.innerHTML = ''; 
-                // Vuelve a añadir la opción por defecto
                 if (defaultOption) {
                     selectGerente.appendChild(defaultOption); 
                 } else {
@@ -438,11 +431,10 @@
                     selectGerente.appendChild(newDefault);
                 }
 
-                // Añadir opciones de gerentes desde los datos cargados
                 if (gerentes && gerentes.length > 0) { 
                     gerentes.forEach(g => {
                         const option = document.createElement('option');
-                        option.value = String(g.id_gerente); // El valor debe ser el ID del gerente
+                        option.value = String(g.carnet_gerente); 
                         option.textContent = g.nombre_gerente; 
                         selectGerente.appendChild(option);
                     });
@@ -451,60 +443,74 @@
                     console.log('La variable "gerentes" está vacía o no es un array, no se añadirán opciones.');
                 }
                 
-                // Inicializa o re-inicializa el select de Materialize después de añadir todas las opciones
                 M.FormSelect.init(selectGerente); 
                 console.log('Materialize Select de gerentes inicializado/actualizado.');
             }
 
             // Carga los navíos en la tabla
-            function cargarTablaNavios(datos) {
-                console.log('Cargando tabla de navíos con', datos.length, 'registros.');
+            // Añadimos un segundo parámetro: isInitialLoadEmpty
+            function cargarTablaNavios(datosVisibles, allNaviosExist) { 
+                console.log('Cargando tabla de navíos con', datosVisibles.length, 'registros.');
                 tablaNavios.innerHTML = ''; 
-                if (datos.length === 0) {
+
+                if (datosVisibles.length === 0) {
                     const tr = document.createElement('tr');
                     tr.classList.add('no-data-row');
-                    tr.innerHTML = `<td colspan="5" class="center-align">No hay navíos registrados o no coinciden con la búsqueda.</td>`;
+                    let message = '';
+                    
+                    // Si el filtro de búsqueda está vacío Y no hay navíos en total, significa que no hay NADA registrado.
+                    if (searchInput.value.trim() === '' && !allNaviosExist) {
+                        message = 'No hay navíos registrados en el sistema.';
+                    } else {
+                        // Si el filtro no está vacío o hay navíos en total pero no coinciden, significa que la búsqueda no encontró nada.
+                        message = 'No hay coincidencias para tu búsqueda.';
+                    }
+
+                    tr.innerHTML = `<td colspan="5" class="center-align">${message}</td>`;
                     tablaNavios.appendChild(tr);
-                    return;
+                    return; 
                 }
-                datos.forEach(n => {
+                
+                datosVisibles.forEach(n => {
                     const tr = document.createElement('tr');
-                    tr.dataset.id = n.id_buque; 
+                    tr.dataset.matricula = n.matricula_buque; 
                     tr.innerHTML = `
                         <td><i class="material-icons">directions_boat</i></td>
                         <td>${n.nombre_buque}</td>
-                        <td>${n.matricula}</td>
-                        <td>${obtenerNombreGerente(n.gerente)}</td> <td>${n.servicio || 'N/A'}</td>
+                        <td>${n.matricula_buque}</td> <td>${obtenerNombreGerente(n.carnet_gerente)}</td> <td>${n.servicio || 'N/A'}</td>
                     `;
                     tablaNavios.appendChild(tr);
                 });
             }
 
-            // Función auxiliar para obtener el nombre del gerente a partir de su ID
-            function obtenerNombreGerente(id) {
-                if (id === null || id === undefined || String(id) === '') return 'No asignado';
+            // Función auxiliar para obtener el nombre del gerente a partir de su carnet
+            function obtenerNombreGerente(carnet) {
+                if (carnet === null || carnet === undefined || String(carnet) === '') return 'No asignado';
                 if (!gerentes || gerentes.length === 0) {
                     return 'No asignado (cargando...)'; 
                 }
-                const g = gerentes.find(ger => String(ger.id_gerente) === String(id)); 
+                const g = gerentes.find(ger => String(ger.carnet_gerente) === String(carnet)); 
                 return g ? g.nombre_gerente : 'No asignado';
             }
 
             // Filtra los navíos según el término de búsqueda
             searchInput.addEventListener('input', function() {
                 console.log('Input en campo de búsqueda:', searchInput.value);
-                cargarTablaNavios(navierosFiltrados());
+                // Cuando se busca, siempre pasamos 'true' para allNaviosExist
+                // porque el mensaje de "no hay registrados" solo se muestra en la carga inicial
+                cargarTablaNavios(navierosFiltrados(), true); 
                 resetSeleccion(); 
             });
 
+            // Devuelve los navíos filtrados según el término de búsqueda
             function navierosFiltrados() {
                 const filtro = searchInput.value.toLowerCase().trim();
-                if (!filtro) return navios; 
+                if (!filtro) return navios; // Si no hay filtro, devuelve todos los navíos
                 return navios.filter(n =>
                     n.nombre_buque.toLowerCase().includes(filtro) ||
-                    n.matricula.toLowerCase().includes(filtro) ||
+                    n.matricula_buque.toLowerCase().includes(filtro) || 
                     (n.servicio && n.servicio.toLowerCase().includes(filtro)) ||
-                    obtenerNombreGerente(n.gerente).toLowerCase().includes(filtro) // ¡CORREGIDO! Usar n.gerente
+                    obtenerNombreGerente(n.carnet_gerente).toLowerCase().includes(filtro) 
                 );
             }
         });

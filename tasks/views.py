@@ -55,13 +55,11 @@ def autentificacion_usuario(request):
 
             # Redirigir según el rol
             if user_role == 'admin':
-                return JsonResponse({'message': 'Login exitoso', 'redirect_url': reverse('completo')}, status=200)
+                return JsonResponse({'message': 'Login exitoso', 'redirect_url': reverse('admin_view')}, status=200)
             elif user_role == 'gerente':
-                return JsonResponse({'message': 'Login exitoso', 'redirect_url': reverse('incompleto')}, status=200)
+                return JsonResponse({'message': 'Login exitoso', 'redirect_url': reverse('gerente_view')}, status=200)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-
 
 @role_required(allowed_roles=['admin'])
 def admin_dashboard(request):
@@ -100,8 +98,6 @@ def logout_view(request):
     request.session.flush()
     messages.info(request, 'Has cerrado sesión exitosamente.')
     return redirect(reverse('login'))
-
-
 
 
 @role_required(allowed_roles=['admin'])
@@ -193,19 +189,36 @@ def ver_navios(request):
     return render(request, 'navio.html')
 
 
-@role_required(allowed_roles=['admin'])
 @require_http_methods(["GET"])
 def gerente_list(request):
     gerentes_data = []
     for gerente in Gerente.objects.all().order_by('nombre_gerente'):
         gerentes_data.append({
-            'id_gerente': gerente.id_gerente,
+            'carnet_gerente': gerente.carnet_gerente,
             'nombre_gerente': gerente.nombre_gerente,
         })
     return JsonResponse(gerentes_data, safe=False)
 
 
-########################################################################
+###########
+
+def gerente_list(request):
+    print("DEBUG: Entrando a gerente_list. Método:", request.method) # Para depuración
+    try:
+        gerentes_data = []
+        for gerente in Gerente.objects.all().order_by('nombre_gerente'):
+            gerentes_data.append({
+                # Cambiado de 'id_gerente' a 'carnet_gerente'
+                'carnet_gerente': gerente.carnet_gerente, 
+                'nombre_gerente': gerente.nombre_gerente,
+            })
+        print(f"DEBUG: Retornando {len(gerentes_data)} gerentes desde gerente_list.") # Para depuración
+        return JsonResponse(gerentes_data, safe=False)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"ERROR: Excepción en gerente_list: {e}")
+        return JsonResponse({'error': f'Error interno del servidor en gerente_list: {str(e)}'}, status=500)
 
 
 @role_required(allowed_roles=['admin'])
@@ -215,11 +228,13 @@ def buque_list_create(request):
         buques_data = []
         for buque in Buque.objects.all().order_by('nombre_buque'):
             buques_data.append({
-                'id_buque': buque.id_buque,
+                # Cambiado de 'id_buque' a 'matricula_buque'
+                'matricula_buque': buque.matricula_buque, 
                 'nombre_buque': buque.nombre_buque,
-                'matricula': buque.matricula,
+                # 'matricula' ya no es un atributo separado, es la PK 'matricula_buque'
                 'servicio': buque.servicio, 
-                'gerente': buque.id_gerente.id_gerente if buque.id_gerente else None, # Usa id_gerente
+                # Cambiado de 'gerente' a 'carnet_gerente'
+                'carnet_gerente': buque.carnet_gerente.carnet_gerente if buque.carnet_gerente else None, 
                 'administrador': None, # Siempre None en la respuesta GET para este campo
             })
         return JsonResponse(buques_data, safe=False)
@@ -228,43 +243,42 @@ def buque_list_create(request):
         try:
             data = json.loads(request.body)
             nombre_buque = data.get('nombre_buque')
-            matricula = data.get('matricula')
+            # Cambiado de 'matricula' a 'matricula_buque'
+            matricula_buque = data.get('matricula_buque') 
             servicio = data.get('servicio') 
-            gerente_id = data.get('gerente') 
+            # Cambiado de 'gerente' a 'carnet_gerente'
+            carnet_gerente = data.get('carnet_gerente') 
             
-            if not nombre_buque or not matricula:
+            if not nombre_buque or not matricula_buque:
                 return JsonResponse({'error': 'El nombre del navío y la matrícula son obligatorios.'}, status=400)
             
             servicio = servicio if servicio else None 
-            gerente_id = gerente_id if gerente_id else None 
+            carnet_gerente = carnet_gerente if carnet_gerente else None 
 
             gerente_instance = None
-            if gerente_id is not None: 
+            if carnet_gerente is not None: 
                 try:
-                    gerente_instance = Gerente.objects.get(id_gerente=int(gerente_id)) 
-                except (Gerente.DoesNotExist, ValueError): 
-                    return JsonResponse({'error': f'El gerente seleccionado con ID "{gerente_id}" no es válido o no existe.'}, status=400)
-        
+                    # Buscar gerente por carnet_gerente
+                    gerente_instance = Gerente.objects.get(carnet_gerente=carnet_gerente) 
+                except Gerente.DoesNotExist: # No es necesario ValueError, ya que carnet_gerente es CharField
+                    return JsonResponse({'error': f'El gerente seleccionado con Carnet "{carnet_gerente}" no es válido o no existe.'}, status=400)
             
-            if Buque.objects.filter(matricula=matricula).exists():
-                return JsonResponse({'error': f'La matrícula "{matricula}" ya existe en otro navío. Por favor, ingrese una matrícula única.'}, status=409)
+            # Verificar si la matrícula ya existe
+            if Buque.objects.filter(matricula_buque=matricula_buque).exists():
+                return JsonResponse({'error': f'La matrícula "{matricula_buque}" ya existe en otro navío. Por favor, ingrese una matrícula única.'}, status=409)
 
-            max_id = Buque.objects.all().order_by('-id_buque').first()
-            new_id = (max_id.id_buque + 1) if max_id else 1
-
+            # Ya no necesitas max_id o new_id si matricula_buque es la PK
             nuevo_buque = Buque.objects.create(
-                id_buque=new_id,
+                matricula_buque=matricula_buque, # Usar matricula_buque como PK
                 nombre_buque=nombre_buque,
-                matricula=matricula,
                 servicio=servicio,
-                id_gerente=gerente_instance, # Usar 'id_gerente' si ese es el nombre del campo ForeignKey
-                id_administrador=None, # **CORREGIDO: Usar el nombre del campo 'id_administrador' y pasar None**
+                carnet_gerente=gerente_instance, # Usar 'carnet_gerente' que es el nombre del campo ForeignKey
+                carnet_admin=None, # Asumo que id_administrador se mapea a carnet_admin
             )
             return JsonResponse({
                 'message': 'Navío creado exitosamente',
-                'id_buque': nuevo_buque.id_buque,
+                'matricula_buque': nuevo_buque.matricula_buque, # Retornar matricula_buque
                 'nombre_buque': nuevo_buque.nombre_buque,
-                'matricula': nuevo_buque.matricula,
             }, status=201)
 
         except json.JSONDecodeError:
@@ -280,16 +294,18 @@ def buque_list_create(request):
 
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "PUT", "DELETE"])
-def buque_retrieve_update_delete(request, id_buque):
-    buque = get_object_or_404(Buque, id_buque=id_buque)
+# Cambiado de 'id_buque' a 'matricula_buque' en la URL
+def buque_retrieve_update_delete(request, matricula_buque): 
+    # Buscar buque por matricula_buque
+    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
 
     if request.method == 'GET':
         return JsonResponse({
-            'id_buque': buque.id_buque,
+            'matricula_buque': buque.matricula_buque, # Retornar matricula_buque
             'nombre_buque': buque.nombre_buque,
-            'matricula': buque.matricula,
             'servicio': buque.servicio,
-            'gerente': buque.id_gerente.id_gerente if buque.id_gerente else None,
+            # Cambiado de 'gerente' a 'carnet_gerente'
+            'carnet_gerente': buque.carnet_gerente.carnet_gerente if buque.carnet_gerente else None,
             'administrador': None, # Siempre None en la respuesta GET según tu lógica
         })
 
@@ -297,31 +313,38 @@ def buque_retrieve_update_delete(request, id_buque):
         try:
             data = json.loads(request.body)
             nombre_buque = data.get('nombre_buque')
-            matricula = data.get('matricula')
-            servicio = data.get('servicio')
-            gerente_id = data.get('gerente')
+            # La matrícula_buque ahora es la PK, no se actualiza (o si se actualiza, es un cambio de PK)
+            # Generalmente, las PKs no se actualizan directamente, sino que se crea una nueva.
+            # Aquí asumimos que la matrícula_buque del parámetro de URL es la matrícula a actualizar.
+            # Y el body de la petición no debería contenerla para PUT si es la PK.
+            # Sin embargo, si el frontend envía 'matricula_buque' en el body, la validamos.
+            nueva_matricula_buque = data.get('matricula_buque') # Si se envía en el body para validar
 
-            if not nombre_buque or not matricula:
-                return JsonResponse({'error': 'El nombre del navío y la matrícula son obligatorios para actualizar.'}, status=400)
+            servicio = data.get('servicio')
+            carnet_gerente = data.get('carnet_gerente')
+
+            if not nombre_buque: # matricula_buque no es obligatoria en el body para PUT si es la PK del URL
+                return JsonResponse({'error': 'El nombre del navío es obligatorio para actualizar.'}, status=400)
+            
+            # Si se intenta cambiar la matrícula_buque (PK)
+            if nueva_matricula_buque and nueva_matricula_buque != matricula_buque:
+                 return JsonResponse({'error': 'No se permite cambiar la matrícula de un navío existente. Elimine y cree uno nuevo si necesita cambiar la matrícula.'}, status=400)
+
 
             servicio = servicio if servicio else None
-            gerente_id = gerente_id if gerente_id else None
+            carnet_gerente = carnet_gerente if carnet_gerente else None
 
             gerente_instance = None
-            if gerente_id is not None:
+            if carnet_gerente is not None:
                 try:
-                    gerente_instance = Gerente.objects.get(id_gerente=int(gerente_id))
-                except (Gerente.DoesNotExist, ValueError):
-                    return JsonResponse({'error': f'El gerente seleccionado con ID "{gerente_id}" no es válido o no existe.'}, status=400)
-
-            if Buque.objects.filter(matricula=matricula).exclude(id_buque=id_buque).exists():
-                return JsonResponse({'error': f'La matrícula "{matricula}" ya está en uso por otro navío. Por favor, ingrese una matrícula única.'}, status=409)
+                    gerente_instance = Gerente.objects.get(carnet_gerente=carnet_gerente)
+                except Gerente.DoesNotExist:
+                    return JsonResponse({'error': f'El gerente seleccionado con Carnet "{carnet_gerente}" no es válido o no existe.'}, status=400)
 
             buque.nombre_buque = nombre_buque
-            buque.matricula = matricula
             buque.servicio = servicio
-            buque.id_gerente = gerente_instance
-            buque.id_administrador = None
+            buque.carnet_gerente = gerente_instance # Usar carnet_gerente
+            buque.carnet_admin = None # Asumo que id_administrador se mapea a carnet_admin
             buque.save()
 
             return JsonResponse({'message': 'Navío actualizado exitosamente'}, status=200)
@@ -343,3 +366,4 @@ def buque_retrieve_update_delete(request, id_buque):
             return JsonResponse({'error': f'Error interno del servidor al eliminar navío: {str(e)}'}, status=500)
 
     return JsonResponse({'error': 'Método HTTP no permitido para esta operación.'}, status=405)
+
