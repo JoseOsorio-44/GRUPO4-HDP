@@ -20,10 +20,10 @@ def login(request):
 
 def autentificacion_usuario(request):
     if request.method == 'POST':
-        identificador_ingresado = request.POST.get('username')
-        contrasenia_ingresada = request.POST.get('password')
+        carnet_inresado = request.POST.get('username')
+        password_ingresada = request.POST.get('password')
 
-        if not identificador_ingresado or not contrasenia_ingresada:
+        if not carnet_inresado or not password_ingresada:
             return JsonResponse({'error': 'Faltan credenciales'}, status=400)
 
         user_role = None 
@@ -31,8 +31,8 @@ def autentificacion_usuario(request):
 
         try:
             user_obj = Administrador.objects.get(
-                identificador_admi=identificador_ingresado,
-                contrasenia_admi=contrasenia_ingresada
+                carnet_admin=carnet_inresado,
+                password_admin=password_ingresada
             )
             user_role = 'admin'
         except Administrador.DoesNotExist:
@@ -41,8 +41,8 @@ def autentificacion_usuario(request):
         if user_role is None: 
             try:
                 user_obj = Gerente.objects.get(
-                    identificador_gerente=identificador_ingresado, 
-                    contrasenia_gerente=contrasenia_ingresada
+                    carnet_gerente=carnet_inresado, 
+                    password_gerente=password_ingresada
                 )
                 user_role = 'gerente'
             except Gerente.DoesNotExist:
@@ -50,7 +50,7 @@ def autentificacion_usuario(request):
 
         if user_role:
             request.session['user_id'] = user_obj.pk 
-            request.session['username'] = identificador_ingresado
+            request.session['username'] = carnet_inresado
             request.session['user_role'] = user_role 
 
             # Redirigir según el rol
@@ -108,89 +108,70 @@ def logout_view(request):
 @require_http_methods(["GET", "POST"])
 def gerente_list_create(request):
     if request.method == 'GET':
-        # Listar todos los gerentes
         gerentes_data = []
         for gerente in Gerente.objects.all():
             gerentes_data.append({
-                'id': gerente.id_gerente,
+                'carnet_gerente': gerente.carnet_gerente,
                 'nombre': gerente.nombre_gerente,
-                'usuario': gerente.identificador_gerente,
-                'contrasenia': gerente.contrasenia_gerente,
+                'contrasenia': gerente.password_gerente,
                 'email': gerente.email,
             })
-        return JsonResponse(gerentes_data, safe=False) # safe=False para listas de diccionarios
+        return JsonResponse(gerentes_data, safe=False)
 
     elif request.method == 'POST':
-        # Crear un nuevo gerente
         try:
-            # Axios envía los datos como JSON, así que usamos request.body
             data = json.loads(request.body)
+            carnet = data.get('carnet_gerente')
             nombre = data.get('nombre')
-            usuario = data.get('usuario')
             password = data.get('password')
             email = data.get('email')
 
-            if not all([nombre, usuario, password, email]):
+            if not all([carnet, nombre, password, email]):
                 return JsonResponse({'error': 'Faltan campos obligatorios'}, status=400)
 
-            # Verificar si el usuario ya existe
-            if Gerente.objects.filter(identificador_gerente=usuario).exists():
-                return JsonResponse({'error': 'El nombre de usuario ya existe'}, status=409)
+            if Gerente.objects.filter(carnet_gerente=carnet).exists():
+                return JsonResponse({'error': 'El carnet de gerente ya existe'}, status=409)
 
-            
-            max_id = Gerente.objects.all().order_by('-id_gerente').first()
-            new_id = (max_id.id_gerente + 1) if max_id else 1
-
-            # Si quieres usar hashing de contraseñas para Gerente:
-            # hashed_password = make_password(password)
-
+            # hashed_password = make_password(password) # Descomentar para hashing
             nuevo_gerente = Gerente.objects.create(
-                id_gerente=new_id, # Comenta/ajusta si ID_GERENTE es SERIAL
+                carnet_gerente=carnet,
                 nombre_gerente=nombre,
-                identificador_gerente=usuario,
-                contrasenia_gerente=password, 
-                # contrasenia_gerente=hashed_password, # Con hashing (RECOMENDADO)
+                password_gerente=password,
+                # password_gerente=hashed_password, # Descomentar para hashing
                 email=email,
-                # id_buque: aquí tendrías que definir cómo se asigna el buque si es necesario
             )
-            return JsonResponse({'message': 'Gerente creado exitosamente', 'id': nuevo_gerente.id_gerente}, status=201)
+            return JsonResponse({'message': 'Gerente creado exitosamente', 'carnet_gerente': nuevo_gerente.carnet_gerente}, status=201)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Request body must be valid JSON'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
-        
-        
-@role_required(allowed_roles=['admin'])    
-@require_http_methods(["PUT", "DELETE"]) # Añadido DELETE si lo vas a implementar
-def gerente_retrieve_update(request, gerente_id):
-    gerente = get_object_or_404(Gerente, id_gerente=gerente_id)
+
+
+@role_required(allowed_roles=['admin'])
+@require_http_methods(["PUT", "DELETE"])
+def gerente_retrieve_update_delete(request, carnet_gerente):
+    gerente = get_object_or_404(Gerente, carnet_gerente=carnet_gerente)
 
     if request.method == 'PUT':
-        # Actualizar un gerente
         try:
             data = json.loads(request.body)
+            nuevo_carnet = data.get('carnet_gerente') # Recibir el carnet (puede ser nuevo o el mismo)
             nombre = data.get('nombre')
-            usuario = data.get('usuario')
-            password = data.get('password') # Puede ser opcional en PUT si no se cambia
+            password = data.get('password')
             email = data.get('email')
 
-            if not all([nombre, usuario, email]): # Password puede ser opcional
+            if not all([nuevo_carnet, nombre, email]):
                 return JsonResponse({'error': 'Faltan campos obligatorios para actualizar'}, status=400)
 
-            # Verificar si el nuevo usuario ya existe para otro gerente
-            if Gerente.objects.filter(identificador_gerente=usuario).exclude(id_gerente=gerente_id).exists():
-                return JsonResponse({'error': 'El nombre de usuario ya está en uso por otro gerente'}, status=409)
-
             gerente.nombre_gerente = nombre
-            gerente.identificador_gerente = usuario
-            if password: # Solo actualiza la contraseña si se proporcionó una nueva
-                # Si usas hashing: gerente.contrasenia_gerente = make_password(password)
-                gerente.contrasenia_gerente = password # Sin hashing
+            if password:
+                # gerente.password_gerente = make_password(password)
+                gerente.password_gerente = password
             gerente.email = email
             gerente.save()
 
-            return JsonResponse({'message': 'Gerente actualizado exitosamente'}, status=200)
+            return JsonResponse({'message': 'Gerente actualizado exitosamente', 'carnet_gerente': gerente.carnet_gerente}, status=200)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Request body must be valid JSON'}, status=400)
@@ -198,10 +179,9 @@ def gerente_retrieve_update(request, gerente_id):
             return JsonResponse({'error': str(e)}, status=500)
 
     elif request.method == 'DELETE':
-        # Eliminar un gerente (si lo vas a implementar)
         try:
             gerente.delete()
-            return JsonResponse({'message': 'Gerente eliminado exitosamente'}, status=204) # 204 No Content
+            return JsonResponse({'message': 'Gerente eliminado exitosamente'}, status=204)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
