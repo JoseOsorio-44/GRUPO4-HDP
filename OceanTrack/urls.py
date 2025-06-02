@@ -17,7 +17,8 @@ urlpatterns = [
     path('buques/', views.ver_navios, name='buques'),
     path('api/navios/', views.buque_list_create, name='buque_list_create'),
     path('api/navios/<str:matricula_buque>/', views.buque_retrieve_update_delete, name='navio_detail'),
-    # path('navios/inventario/<str:matricula_buque>/', views.inventario_view, name='inventario_buque'),
+    path('buques/inventario/<str:matricula_buque>/', views.inventario_view, name='inventario_buque'),
+
 
     
 

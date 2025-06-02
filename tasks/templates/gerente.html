@@ -118,18 +118,19 @@
 <body>
     <script src="{% static 'js/materialize.min.js' %}"></script>
 
-    <nav class="blue darken-1">
-        <div class="nav-wrapper">
-            <a href="#!" class="brand-logo"></a>
-            <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-left:14px; margin-top:6px;">
-            <span style="margin-left: 10px; font-size: 2.5rem; position: relative; top: -14px;">OceanTrack</span>
-            <ul class="right hide-on-med-and-down">
-                <li><a href="{% url 'buques' %}"><i class="material-icons left">directions_boat</i>Navios</a></li>
-                <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
-            </ul>
-        </div>
-    </nav>
-
+<nav class="blue darken-1">
+    <div class="nav-wrapper">
+        <a href="{% url 'admin_view' %}" class="brand-logo">
+            <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-right: 10px; vertical-align: middle;">
+            <span>OceanTrack</span>
+        </a>
+        <a href="#!" class="brand-logo center">Gerentes</a>
+        <ul class="right hide-on-med-and-down">
+            <li><a href="{% url 'buques' %}"><i class="material-icons left">directions_boat</i>Navios</a></li>
+            <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
+        </ul>
+    </div>
+</nav>
     <div class="container">
         <div class="row" style="margin-top: 20px;">
             <div class="col s12 m6">

@@ -34,9 +34,11 @@
 
     <nav class="blue darken-1">
         <div class="nav-wrapper">
-            <a href="#!" class="brand-logo"></a>
-            <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-left:14px; margin-top:6px;">
+            <a href="{% url 'admin_view' %}" class="brand-logo">
+              <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-left:14px; margin-top:6px;">
             <span style="margin-left: 10px; font-size: 2.5rem; position: relative; top: -14px;">OceanTrack</span>
+            </a>
+            <a href="#!" class="brand-logo center">Navios</a>
             <ul class="right hide-on-med-and-down">
                 <li><a href="{% url 'admin_view' %}"><i class="material-icons left">people</i>Gerentes</a></li>
                 <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
