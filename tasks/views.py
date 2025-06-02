@@ -1,24 +1,24 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from tasks.models import Administrador, Gerente, Buque
 from django.contrib import messages
 from django.urls import reverse
 from .decorator import role_required
-from django.contrib.auth.hashers import make_password, check_password
-from django.views.decorators.csrf import csrf_exempt 
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+import traceback
 
 
-# Create your views here.
 def home(request):
     return render(request, 'home.html')
+
 
 def login(request):
     return render(request, 'login.html')
 
 
-#######filtrado de usuario################
+#filtrado de usuario
 def autentificacion_usuario(request):
     if request.method == 'POST':
         carnet_inresado = request.POST.get('username')
@@ -38,7 +38,6 @@ def autentificacion_usuario(request):
             user_role = 'admin'
         except Administrador.DoesNotExist:
             pass
-
 
         if user_role is None:
             try:
@@ -68,81 +67,46 @@ def autentificacion_usuario(request):
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
+#vista de administrador
 @role_required(allowed_roles=['admin'])
 def admin_dashboard(request):
-    # Ejemplo de acceso a datos de sesión
     carnet_admin_logueado = request.session.get('username')
     rol_logueado = request.session.get('user_role')
-    # ... puedes usar carnet_admin_logueado para cualquier lógica específica ...
     return render(request, 'gerente.html', {
         'username': carnet_admin_logueado,
         'role': rol_logueado
     })
 
+
+#vista de gerente
 @role_required(allowed_roles=['gerente'])
 def gerente_dashboard(request):
-    # Ejemplo de acceso a datos de sesión
     carnet_gerente_logueado = request.session.get('username')
     rol_logueado = request.session.get('user_role')
     matricula_buque_asociada = request.session.get('buque_matricula')
-    # ... puedes usar estos datos para cualquier lógica específica ...
     return render(request, 'incompleto.html', {
         'username': carnet_gerente_logueado,
         'role': rol_logueado,
         'buque_matricula': matricula_buque_asociada
     })
 
+
+#vista de sin permisos
 def sin_permisos(request):
     return render(request, 'sinpermiso.html', {
         'message': 'No tienes los permisos necesarios para acceder a esta sección.',
         'username': request.session.get('username', 'Invitado')
     })
 
+
+#cierre de sesion
 def logout_view(request):
     request.session.flush()
     messages.info(request, 'Has cerrado sesión exitosamente.')
     return redirect(reverse('login'))
 
 
-@role_required(allowed_roles=['admin'])
-def admin_dashboard(request):
-    # Proteger esta vista para que solo sea accesible por administradores
-    if request.session.get('user_role') != 'admin':
-        messages.error(request, 'Acceso denegado. No eres administrador.')
-        return redirect('no-permisos/') # Asumo que tienes una URL 'login_page'
-
-    # Renderizar el dashboard completo
-    return render(request, 'gerente.html', {
-        'username': request.session.get('username'),
-        'role': request.session.get('user_role')
-    })
-
-@role_required(allowed_roles=['gerente'])
-def gerente_dashboard(request):
-    if request.session.get('user_role') != 'gerente':
-        messages.error(request, 'Acceso denegado. No eres gerente.')
-        return redirect('no-permisos/')
-
-    return render(request, 'incompleto.html', {
-        'username': request.session.get('username'),
-        'role': request.session.get('user_role')
-    })
-    
-
-def sin_permisos(request):
-    return render(request, 'sinpermiso.html', {
-        'message': 'No tienes los permisos necesarios para acceder a esta sección.',
-        'username': request.session.get('username', 'Invitado')
-    })
-
-def logout_view(request):
-    request.session.flush()
-    messages.info(request, 'Has cerrado sesión exitosamente.')
-    return redirect(reverse('login'))
-
-#########Control de gerentes#########
-
-#creacion de lista de gerentes
+#vista de lista de gerentes y creacion
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "POST"])
 def gerente_list_create(request):
@@ -184,7 +148,8 @@ def gerente_list_create(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
-#actualizacion y creacion de gerente
+
+#delete y update de gerentes
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["PUT", "DELETE"])
 def gerente_retrieve_update_delete(request, carnet_gerente):
@@ -203,7 +168,6 @@ def gerente_retrieve_update_delete(request, carnet_gerente):
 
             gerente.nombre_gerente = nombre
             if password:
-                # gerente.password_gerente = make_password(password)
                 gerente.password_gerente = password
             gerente.email = email
             gerente.save()
@@ -225,66 +189,36 @@ def gerente_retrieve_update_delete(request, carnet_gerente):
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
-@role_required(allowed_roles=['admin'])    
+#vista de navios
+@role_required(allowed_roles=['admin'])
 def ver_navios(request):
     return render(request, 'navio.html')
 
 
-#lista para el select
-@role_required(allowed_roles=['admin'])
-@require_http_methods(["GET"])
-def gerente_list(request):
-    gerentes_data = []
-    for gerente in Gerente.objects.all().order_by('nombre_gerente'):
-        gerentes_data.append({
-            'carnet_gerente': gerente.carnet_gerente,
-            'nombre_gerente': gerente.nombre_gerente,
-        })
-    return JsonResponse(gerentes_data, safe=False)
-
-
-###########control de navios##########
-
-#Lista de navios 
-@role_required(allowed_roles=['admin'])
-def gerente_list(request):
-    print("DEBUG: Entrando a gerente_list. Método:", request.method) # Para depuración
-    try:
-        gerentes_data = []
-        for gerente in Gerente.objects.all().order_by('nombre_gerente'):
-            gerentes_data.append({
-                'carnet_gerente': gerente.carnet_gerente, 
-                'nombre_gerente': gerente.nombre_gerente,
-            })
-        print(f"DEBUG: Retornando {len(gerentes_data)} gerentes desde gerente_list.") 
-        return JsonResponse(gerentes_data, safe=False)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"ERROR: Excepción en gerente_list: {e}")
-        return JsonResponse({'error': f'Error interno del servidor en gerente_list: {str(e)}'}, status=500)
-
-
+#creacion de lista y de buque
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "POST"])
+@csrf_exempt
 def buque_list_create(request):
     if request.method == 'GET':
         buques_data = []
         admin_logueado_carnet = request.session.get('username')
 
         for buque in Buque.objects.all().order_by('nombre_buque'):
+            nombre_gerente_asignado = buque.carnet_gerente.nombre_gerente if buque.carnet_gerente else None
+
             buques_data.append({
                 'matricula_buque': buque.matricula_buque,
                 'nombre_buque': buque.nombre_buque,
                 'servicio': buque.servicio,
                 'carnet_gerente': buque.carnet_gerente.carnet_gerente if buque.carnet_gerente else None,
+                'nombre_gerente_asignado': nombre_gerente_asignado,
                 'administrador_logueado_en_sesion': admin_logueado_carnet,
                 'carnet_admin_creador': buque.carnet_admin.carnet_admin if buque.carnet_admin else None,
             })
         return JsonResponse(buques_data, safe=False)
 
     elif request.method == 'POST':
-
         if request.session.get('user_role') != 'admin':
             return JsonResponse({'error': 'Acceso denegado. Solo los administradores pueden crear navíos.'}, status=403)
 
@@ -293,7 +227,7 @@ def buque_list_create(request):
             nombre_buque = data.get('nombre_buque')
             matricula_buque = data.get('matricula_buque')
             servicio = data.get('servicio')
-            carnet_gerente_id = data.get('carnet_gerente') # Renombrado a carnet_gerente_id para mayor claridad
+            carnet_gerente_id = data.get('carnet_gerente')
 
             if not nombre_buque or not matricula_buque:
                 return JsonResponse({'error': 'El nombre del navío y la matrícula son obligatorios.'}, status=400)
@@ -301,17 +235,16 @@ def buque_list_create(request):
             servicio_final = servicio if servicio else None
 
             gerente_instance = None
-            if carnet_gerente_id is not None: 
-                if carnet_gerente_id == "": 
-                    gerente_instance = None
-                else:
-                    try:
-                        gerente_instance = Gerente.objects.get(carnet_gerente=carnet_gerente_id)
-                    except Gerente.DoesNotExist:
-                        return JsonResponse({'error': f'El gerente seleccionado con Carnet "{carnet_gerente_id}" no es válido o no existe.'}, status=400)
+            if carnet_gerente_id is not None and carnet_gerente_id != "":
+                try:
+                    gerente_instance = Gerente.objects.get(carnet_gerente=carnet_gerente_id)
+                    if gerente_instance.matricula_buque is not None:
+                        return JsonResponse({'error': f'El gerente "{gerente_instance.nombre_gerente}" (Carnet: {gerente_instance.carnet_gerente}) ya está asignado a otro navío y no puede ser seleccionado.'}, status=400)
+                except Gerente.DoesNotExist:
+                    return JsonResponse({'error': f'El gerente seleccionado con Carnet "{carnet_gerente_id}" no es válido o no existe.'}, status=400)
 
             if Buque.objects.filter(matricula_buque=matricula_buque).exists():
-                return JsonResponse({'error': f'La matrícula "{matricula_buque}" ya existe en otro navío. Por favor, ingrese una matrícula única.'}, status=409)
+                return JsonResponse({'error': f'La matrícula "{matricula_buque}" ya existe en el sistema'}, status=409)
 
             admin_carnet_from_session = request.session.get('username')
             admin_instance = None
@@ -325,117 +258,126 @@ def buque_list_create(request):
                 matricula_buque=matricula_buque,
                 nombre_buque=nombre_buque,
                 servicio=servicio_final,
-                carnet_gerente=gerente_instance, 
-                carnet_admin=admin_instance, 
+                carnet_gerente=gerente_instance,
+                carnet_admin=admin_instance,
             )
+
+            if gerente_instance:
+                gerente_instance.matricula_buque = nuevo_buque
+                gerente_instance.save()
+
             return JsonResponse({
                 'message': 'Navío creado exitosamente',
                 'matricula_buque': nuevo_buque.matricula_buque,
                 'nombre_buque': nuevo_buque.nombre_buque,
-                'carnet_admin_creador': nuevo_buque.carnet_admin.carnet_admin if nuevo_buque.carnet_admin else None # Retornar el carnet para confirmación
+                'carnet_admin_creador': nuevo_buque.carnet_admin.carnet_admin if nuevo_buque.carnet_admin else None
             }, status=201)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'El cuerpo de la solicitud no es un JSON válido. Verifique el formato.'}, status=400)
         except Exception as e:
-            import traceback
             traceback.print_exc()
-            print(f"ERROR: Error inesperado al crear buque: {e}")
-            return JsonResponse({'error': f'Error interno del servidor al crear navío: {str(e)}'}, status=500)
+            return JsonResponse({'error': f'{str(e)}'}, status=500)
 
     return JsonResponse({'error': 'Método HTTP no permitido para esta operación.'}, status=405)
 
 
-#actualizacion y eliminacion de buque
+#update y delete de buque
 @role_required(allowed_roles=['admin'])
-@require_http_methods(["GET", "PUT", "DELETE"])
+@require_http_methods(["PUT", "DELETE"])
 def buque_retrieve_update_delete(request, matricula_buque):
     buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
 
-
-    if request.method == 'GET':
-        return JsonResponse({
-            'matricula_buque': buque.matricula_buque,
-            'nombre_buque': buque.nombre_buque,
-            'servicio': buque.servicio,
-            'carnet_gerente': buque.carnet_gerente.carnet_gerente if buque.carnet_gerente else None,
-            'administrador': request.session.get('username'), # Carnet del usuario logueado en la sesión actual
-            'carnet_admin_creador': buque.carnet_admin.carnet_admin if buque.carnet_admin else None, # Carnet del admin que lo creó
-             
-            
-        })
-        
-
-    elif request.method == 'PUT':
+    if request.method == 'PUT':
         if request.session.get('user_role') != 'admin':
             return JsonResponse({'error': 'Acceso denegado. Solo los administradores pueden actualizar navíos.'}, status=403)
 
         try:
             data = json.loads(request.body)
-            nombre_buque = data.get('nombre_buque', buque.nombre_buque)
-            servicio = data.get('servicio', buque.servicio) # Asume que el servicio puede ser None
+            nuevo_nombre_buque = data.get('nombre_buque')
+            nuevo_matricula_buque = data.get('matricula_buque')
+            nuevo_servicio = data.get('servicio')
+            nuevo_carnet_gerente_id = data.get('carnet_gerente')
 
-            nueva_matricula_buque_en_body = data.get('matricula_buque')
-            if nueva_matricula_buque_en_body and nueva_matricula_buque_en_body != matricula_buque:
-                return JsonResponse({'error': 'No se permite cambiar la matrícula de un navío existente. Elimine y cree uno nuevo si necesita cambiar la matrícula.'}, status=400)
+            if not nuevo_nombre_buque or not nuevo_matricula_buque:
+                return JsonResponse({'error': 'El nombre del navío y la matrícula son obligatorios.'}, status=400)
 
-            carnet_gerente_id = data.get('carnet_gerente') # Ahora es ID, por eso 'id'
+            if Buque.objects.filter(matricula_buque=nuevo_matricula_buque).exclude(matricula_buque=matricula_buque).exists():
+                return JsonResponse({'error': f'La matrícula "{nuevo_matricula_buque}" ya existe en otro navío. Por favor, ingrese una matrícula única.'}, status=409)
 
-            # Manejo del servicio: string vacío a None
-            servicio_final = servicio if servicio else None
+            old_gerente = buque.carnet_gerente
+            if old_gerente and (nuevo_carnet_gerente_id is None or nuevo_carnet_gerente_id == "" or str(old_gerente.carnet_gerente) != str(nuevo_carnet_gerente_id)):
+                old_gerente.matricula_buque = None
+                old_gerente.save()
 
-            # Manejo del gerente
-            gerente_instance = None
-            if carnet_gerente_id is not None:
-                if carnet_gerente_id == "":
-                    gerente_instance = None
-                else:
-                    try:
-                        gerente_instance = Gerente.objects.get(carnet_gerente=carnet_gerente_id)
-                    except Gerente.DoesNotExist:
-                        return JsonResponse({'error': f'El gerente seleccionado con Carnet "{carnet_gerente_id}" no es válido o no existe.'}, status=400)
-            
-            buque.nombre_buque = nombre_buque
-            buque.servicio = servicio_final
-            buque.carnet_gerente = gerente_instance
-
-            # Obtener y asignar la instancia del ADMINISTRADOR LOGUEADO
-            admin_carnet_from_session = request.session.get('username')
-            admin_instance = None
-            if admin_carnet_from_session:
+            new_gerente_instance = None
+            if nuevo_carnet_gerente_id is not None and nuevo_carnet_gerente_id != "":
                 try:
-                    admin_instance = Administrador.objects.get(carnet_admin=admin_carnet_from_session)
-                except Administrador.DoesNotExist:
-                    return JsonResponse({'error': 'Administrador logueado no encontrado en el sistema.'}, status=500)
-            
-            buque.carnet_admin = admin_instance # ¡Asigna la instancia del objeto Administrador!
-            
+                    new_gerente_instance = Gerente.objects.get(carnet_gerente=nuevo_carnet_gerente_id)
+                    if new_gerente_instance.matricula_buque is not None and new_gerente_instance.matricula_buque.matricula_buque != buque.matricula_buque:
+                        return JsonResponse({'error': f'El gerente "{new_gerente_instance.nombre_gerente}" (Carnet: {new_gerente_instance.carnet_gerente}) ya está asignado a otro navío y no puede ser seleccionado.'}, status=400)
+                except Gerente.DoesNotExist:
+                    return JsonResponse({'error': f'El gerente seleccionado con Carnet "{nuevo_carnet_gerente_id}" no es válido o no existe.'}, status=400)
+
+            buque.nombre_buque = nuevo_nombre_buque
+            buque.matricula_buque = nuevo_matricula_buque
+            buque.servicio = nuevo_servicio if nuevo_servicio else None
+            buque.carnet_gerente = new_gerente_instance
             buque.save()
 
-            return JsonResponse({'message': 'Navío actualizado exitosamente', 'matricula_buque': buque.matricula_buque}, status=200)
+            if new_gerente_instance:
+                new_gerente_instance.matricula_buque = buque
+                new_gerente_instance.save()
+
+            return JsonResponse({'message': 'Navío actualizado correctamente'}, status=200)
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'El cuerpo de la solicitud no es un JSON válido.'}, status=400)
         except Exception as e:
-            import traceback
             traceback.print_exc()
-            print(f"ERROR: Error inesperado al actualizar buque: {e}")
-            return JsonResponse({'error': f'Error interno del servidor al actualizar navío: {str(e)}'}, status=500)
+            return JsonResponse({'error': f'{str(e)}'}, status=500)
 
     elif request.method == 'DELETE':
         if request.session.get('user_role') != 'admin':
             return JsonResponse({'error': 'Acceso denegado. Solo los administradores pueden eliminar navíos.'}, status=403)
         try:
+            if buque.carnet_gerente:
+                gerente_asociado = buque.carnet_gerente
+                gerente_asociado.matricula_buque = None
+                gerente_asociado.save()
+
             buque.delete()
-            return JsonResponse({'message': 'Navío eliminado exitosamente'}, status=204)
+            return JsonResponse({'message': 'Navío eliminado correctamente'}, status=204)
         except Exception as e:
-            import traceback
             traceback.print_exc()
-            print(f"ERROR: Error inesperado al eliminar buque: {e}")
             return JsonResponse({'error': f'Error interno del servidor al eliminar navío: {str(e)}'}, status=500)
 
-    return JsonResponse({'error': 'Método HTTP no permitido para esta operación.'}, status=405)
+    return JsonResponse({'error': 'Método HTTP no permitido.'}, status=405)
 
 
+#lista de gerentes para select
+@role_required(allowed_roles=['admin'])
+@require_http_methods(["GET"])
+def gerente_list(request):
+    try:
+        gerentes_qs = Gerente.objects.filter(matricula_buque__isnull=True).order_by('nombre_gerente')
+        gerentes_data = []
+        for gerente in gerentes_qs:
+            gerentes_data.append({
+                'carnet_gerente': gerente.carnet_gerente,
+                'nombre_gerente': gerente.nombre_gerente,
+                'matricula_buque': gerente.matricula_buque.matricula_buque if gerente.matricula_buque else None
+            })
+        return JsonResponse(gerentes_data, safe=False)
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({'error': f'Error interno del servidor en gerente_list: {str(e)}'}, status=500)
+
+
+#vista del catalogo
 def inventario_view(request, matricula_buque):
-    return render(request, 'catalogo.html')
+    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
+    context = {
+        'buque': buque,
+    }
+    return render(request, 'catalogo.html', context)

@@ -213,254 +213,271 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var modales = document.querySelectorAll('.modal');
-            M.Modal.init(modales);
+    document.addEventListener('DOMContentLoaded', function() {
+        var modales = document.querySelectorAll('.modal');
+        M.Modal.init(modales);
 
-            axios.defaults.xsrfCookieName = 'csrftoken';
-            axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+        axios.defaults.xsrfCookieName = 'csrftoken';
+        axios.defaults.xsrfHeaderName = 'X-CSRFToken';
 
-            let gerentes = [];
-            let gerenteSeleccionado = null;
+        let gerentes = [];
+        let gerenteSeleccionado = null;
 
-            const tablaGerentes = document.getElementById('tablaGerentes');
-            const formGerente = document.getElementById('formGerente');
-            const btnEditar = document.getElementById('btnEditarGerente');
-            const modalTitulo = document.getElementById('modalTitulo');
-            const btnAccion = document.getElementById('btnAccion');
-            const originalCarnetGerenteInput = document.getElementById('originalCarnetGerente');
-            const carnetGerenteInput = document.getElementById('carnetGerente');
-            const nombreGerenteInput = document.getElementById('nombreGerente');
-            const passGerenteInput = document.getElementById('passGerente');
-            const emailGerenteInput = document.getElementById('emailGerente');
-            const btnEliminar = document.getElementById('btnEliminarGerente');
-            const searchInput = document.getElementById('search'); 
-            const btnAgregarGerente = document.getElementById('btnAgregarGerente'); // ID para el botón "Agregar Gerente"
+        const tablaGerentes = document.getElementById('tablaGerentes');
+        const formGerente = document.getElementById('formGerente');
+        const btnEditar = document.getElementById('btnEditarGerente');
+        const modalTitulo = document.getElementById('modalTitulo');
+        const btnAccion = document.getElementById('btnAccion');
+        const originalCarnetGerenteInput = document.getElementById('originalCarnetGerente');
+        const carnetGerenteInput = document.getElementById('carnetGerente');
+        const nombreGerenteInput = document.getElementById('nombreGerente');
+        const passGerenteInput = document.getElementById('passGerente');
+        const emailGerenteInput = document.getElementById('emailGerente');
+        const btnEliminar = document.getElementById('btnEliminarGerente');
+        const searchInput = document.getElementById('search'); 
+        const btnAgregarGerente = document.getElementById('btnAgregarGerente');
+        
+        const togglePasswordIcons = document.querySelectorAll('.toggle-password');
+
+        cargarGerentes();
+
+        tablaGerentes.addEventListener('click', function(e) {
+            const fila = e.target.closest('tr');
+            // MODIFICACIÓN: Usa la clase 'no-data-row' consistentemente para evitar selección
+            if (!fila || fila.classList.contains('no-data-row')) { 
+                resetSeleccion();
+                return;
+            }
+
+            document.querySelectorAll('#tablaGerentes tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+
+            fila.classList.add('selected');
+            gerenteSeleccionado = gerentes.find(g => g.carnet_gerente == fila.dataset.carnet);
+
+            btnEditar.style.display = 'inline-block';
+            btnEliminar.style.display = 'inline-block'; // Asegúrate de que el botón de eliminar se muestre al seleccionar
+        });
+
+        btnEditar.addEventListener('click', function() {
+            if (!gerenteSeleccionado) return;
+
+            modalTitulo.textContent = 'Información del Gerente';
+            btnAccion.textContent = 'Actualizar';
+            btnEliminar.style.display = 'inline-block';
+
+            originalCarnetGerenteInput.value = gerenteSeleccionado.carnet_gerente;
+            carnetGerenteInput.value = gerenteSeleccionado.carnet_gerente.trim();
+            nombreGerenteInput.value = gerenteSeleccionado.nombre.trim();
             
-            const togglePasswordIcons = document.querySelectorAll('.toggle-password');
-
-            cargarGerentes();
-
-            tablaGerentes.addEventListener('click', function(e) {
-                const fila = e.target.closest('tr');
-                if (!fila || fila.classList.contains('no-results-message-row')) { // Evitar seleccionar el mensaje
-                    resetSeleccion();
-                    return;
-                }
-
-                document.querySelectorAll('#tablaGerentes tr').forEach(row => {
-                    row.classList.remove('selected');
-                });
-
-                fila.classList.add('selected');
-                gerenteSeleccionado = gerentes.find(g => g.carnet_gerente == fila.dataset.carnet);
-
-                btnEditar.style.display = 'inline-block';
-            });
-
-            btnEditar.addEventListener('click', function() {
-                if (!gerenteSeleccionado) return;
-
-                modalTitulo.textContent = 'Información del Gerente';
-                btnAccion.textContent = 'Actualizar';
-                btnEliminar.style.display = 'inline-block';
-
-                originalCarnetGerenteInput.value = gerenteSeleccionado.carnet_gerente;
-                carnetGerenteInput.value = gerenteSeleccionado.carnet_gerente.trim();
-                nombreGerenteInput.value = gerenteSeleccionado.nombre.trim();
-                
-                // La contraseña solo se carga si existe en el objeto. Si no, se deja vacío para que el usuario la cambie si quiere.
-                passGerenteInput.value = gerenteSeleccionado.contrasenia ? gerenteSeleccionado.contrasenia.trim() : ''; 
-                
-                emailGerenteInput.value = gerenteSeleccionado.email.trim();
-
-                // Hacer el campo de carnet de solo lectura al editar, no deshabilitado
-                carnetGerenteInput.readOnly = true; 
-                
-                passGerenteInput.type = 'password';
-                const currentToggleIcon = passGerenteInput.parentElement.querySelector('.toggle-password');
-                if (currentToggleIcon) {
-                    currentToggleIcon.textContent = 'visibility';
-                }
-
-                M.updateTextFields(); // Importante para que los labels floten correctamente con readonly
-
-                const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
-                modal.open();
-            });
-
-            btnEliminar.addEventListener('click', function() {
-                if (!gerenteSeleccionado) return;
+            passGerenteInput.value = gerenteSeleccionado.contrasenia ? gerenteSeleccionado.contrasenia.trim() : ''; 
             
-                if (confirm(`¿Estás seguro de eliminar al gerente ${gerenteSeleccionado.nombre} con carnet ${gerenteSeleccionado.carnet_gerente}?`)) {
-                    axios.delete(`/api/gerentes/${gerenteSeleccionado.carnet_gerente}/`)
-                        .then(response => {
-                            M.toast({html: 'Gerente eliminado exitosamente', classes: 'green'});
-                            const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
-                            modal.close();
-                            cargarGerentes();
-                            resetSeleccion(); // Resetear selección después de eliminar
-                    })
-                        .catch(error => {
-                            console.error('Error eliminando gerente:', error);
-                            const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Error al eliminar gerente';
-                            M.toast({html: "No puede eliminar un gerente asignado a un buque", classes: 'red'});
-                    });
-                }
-            });
+            emailGerenteInput.value = gerenteSeleccionado.email.trim();
 
-            togglePasswordIcons.forEach(icon => {
-                icon.addEventListener('click', function() {
-                    const targetId = this.getAttribute('toggle');
-                    const inputToToggle = document.querySelector(targetId);
+            carnetGerenteInput.readOnly = true; 
+            
+            passGerenteInput.type = 'password';
+            const currentToggleIcon = passGerenteInput.parentElement.querySelector('.toggle-password');
+            if (currentToggleIcon) {
+                currentToggleIcon.textContent = 'visibility';
+            }
 
-                    if (inputToToggle) {
-                        const type = inputToToggle.getAttribute('type') === 'password' ? 'text' : 'password';
-                        inputToToggle.setAttribute('type', type);
-                        this.textContent = (type === 'password') ? 'visibility' : 'visibility_off';
-                    } else {
-                        console.error("Error: No se encontró el input de contraseña para alternar la visibilidad.");
-                    }
-                });
-            });
+            M.updateTextFields();
 
-            formGerente.addEventListener('submit', function(e) {
-                e.preventDefault();
+            const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
+            modal.open();
+        });
 
-                const carnet = carnetGerenteInput.value.trim();
-                const originalCarnet = originalCarnetGerenteInput.value.trim();
-                const nombre = nombreGerenteInput.value.trim();
-                const password = passGerenteInput.value.trim();
-                const email = emailGerenteInput.value.trim();
-                
-                const esEdicion = originalCarnet !== ''; 
-                let carnet_para_url = ''; 
-                let url = '';
-                let metodo = '';
-
-                if (!carnet || !nombre || !email) {
-                    M.toast({html: 'Carnet, nombre y email son obligatorios.', classes: 'red'});
-                    return;
-                }
-
-                if (!esEdicion) {
-                    metodo = 'post';
-                    url = '/api/gerentes/'; 
-                    if (!password) { 
-                        M.toast({html: 'La contraseña es obligatoria para nuevos gerentes.', classes: 'red'});
-                        return;
-                    }
-                } else { 
-                    metodo = 'put';
-                    carnet_para_url = originalCarnet; 
-                    url = `/api/gerentes/${carnet_para_url}/`;
-                }
-
-                const gerenteData = {
-                    carnet_gerente: carnet,
-                    nombre: nombre,
-                    // Si la contraseña está vacía y es edición, no la envíes para no sobreescribir con vacío
-                    password: (esEdicion && !password) ? undefined : password, 
-                    email: email,
-                    tipo_usuario: 'gerente'
-                };
-
-                axios({
-                    method: metodo,
-                    url: url,
-                    data: gerenteData
-                })
-                .then(response => {
-                    M.toast({html: `Gerente ${esEdicion ? 'actualizado' : 'registrado'} exitosamente`, classes: 'green'});
-                    const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
-                    modal.close();
-                    formGerente.reset();
-                    M.updateTextFields();
-                    cargarGerentes();
-                    resetSeleccion(); // Resetear selección después de guardar
-                })
-                .catch(error => {
-                    console.error('Error en la operación del gerente:', error.response ? error.response.data : error.message);
-                    let errorMessage = 'Verifique la consola para detalles';
-                    if (error.response && error.response.data && error.response.data.error) {
-                        errorMessage = error.response.data.error;
-                    } else if (error.response && error.response.status === 409) { // Conflicto: carnet ya existe
-                        errorMessage = "El carnet de gerente ya existe. Por favor, use uno diferente.";
-                    }
-                    M.toast({html: `Error al ${esEdicion ? 'actualizar' : 'registrar'} gerente: ` + errorMessage, classes: 'red'});
-                });
-            });
-
-            function cargarGerentes() {
-                axios.get('/api/gerentes/')
+        btnEliminar.addEventListener('click', function() {
+            if (!gerenteSeleccionado) return;
+        
+            if (confirm(`¿Estás seguro de eliminar al gerente ${gerenteSeleccionado.nombre} con carnet ${gerenteSeleccionado.carnet_gerente}?`)) {
+                axios.delete(`/api/gerentes/${gerenteSeleccionado.carnet_gerente}/`)
                     .then(response => {
-                        gerentes = response.data;
-                        renderizarTabla();
+                        M.toast({html: 'Gerente eliminado exitosamente', classes: 'green'});
+                        const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
+                        modal.close();
+                        cargarGerentes();
+                        resetSeleccion();
                     })
                     .catch(error => {
-                        console.error('Error cargando gerentes:', error.response ? error.response.data : error.message);
-                        M.toast({html: 'Error al cargar gerentes', classes: 'red'});
-                        tablaGerentes.innerHTML = `<tr><td colspan="4" class="no-results-message">Error al cargar gerentes. Intente de nuevo más tarde.</td></tr>`;
+                        console.error('Error eliminando gerente:', error);
+                        const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Error al eliminar gerente';
+                        // MODIFICACIÓN: Mensaje más específico si el error es por asignación de buque.
+                        if (error.response && error.response.data && error.response.data.error && error.response.data.error.includes("No puede eliminar un gerente asignado a un buque")) {
+                            M.toast({html: "No se puede eliminar este gerente porque está asignado a un buque.", classes: 'red'});
+                        } else {
+                            M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
+                        }
                     });
             }
-
-            function renderizarTabla() {
-                const searchTerm = searchInput.value.toLowerCase().trim();
-                const filteredGerentes = gerentes.filter(gerente =>
-                    gerente.nombre.toLowerCase().includes(searchTerm) ||
-                    gerente.carnet_gerente.toLowerCase().includes(searchTerm) ||
-                    gerente.email.toLowerCase().includes(searchTerm)
-                );
-
-                if (filteredGerentes.length === 0 && searchTerm === '') {
-                    tablaGerentes.innerHTML = `<tr><td colspan="4" class="no-results-message">No hay gerentes registrados en el sistema.</td></tr>`;
-                } else if (filteredGerentes.length === 0 && searchTerm !== '') {
-                    tablaGerentes.innerHTML = `<tr><td colspan="4" class="no-results-message">No hay gerentes que coincidan con la búsqueda.</td></tr>`;
-                } else {
-                    tablaGerentes.innerHTML = filteredGerentes.map(gerente => `
-                        <tr data-carnet="${gerente.carnet_gerente}">
-                            <td><i class="material-icons">person</i></td>
-                            <td>${gerente.nombre}</td>
-                            <td>${gerente.carnet_gerente}</td>
-                            <td>${gerente.email}</td>
-                        </tr>
-                    `).join('');
-                }
-
-                resetSeleccion(); // Resetear selección al renderizar la tabla
-            }
-
-            // Manejador para el botón "Agregar Gerente"
-            btnAgregarGerente.addEventListener('click', function() {
-                modalTitulo.textContent = 'Agregar gerente';
-                btnAccion.textContent = 'Registrar';
-                btnEliminar.style.display = 'none';
-                formGerente.reset();
-                originalCarnetGerenteInput.value = ''; // Asegurarse de que no hay un carnet original
-                carnetGerenteInput.readOnly = false; // Hacer el carnet editable para agregar
-                
-                passGerenteInput.type = 'password';
-                const currentToggleIcon = passGerenteInput.parentElement.querySelector('.toggle-password');
-                if (currentToggleIcon) {
-                    currentToggleIcon.textContent = 'visibility';
-                }
-                M.updateTextFields(); // Actualizar para que los labels floten correctamente
-            });
-
-
-            searchInput.addEventListener('input', function() {
-                renderizarTabla(); // La función renderizarTabla ahora maneja el filtrado
-            });
-
-            // Función para resetear la selección y ocultar botones de acción
-            function resetSeleccion() {
-                gerenteSeleccionado = null;
-                document.querySelectorAll('#tablaGerentes tr').forEach(row => {
-                    row.classList.remove('selected');
-                });
-                btnEditar.style.display = 'none';
-            }
         });
-    </script>
+
+        togglePasswordIcons.forEach(icon => {
+            icon.addEventListener('click', function() {
+                const targetId = this.getAttribute('toggle');
+                const inputToToggle = document.querySelector(targetId);
+
+                if (inputToToggle) {
+                    const type = inputToToggle.getAttribute('type') === 'password' ? 'text' : 'password';
+                    inputToToggle.setAttribute('type', type);
+                    this.textContent = (type === 'password') ? 'visibility' : 'visibility_off';
+                } else {
+                    console.error("Error: No se encontró el input de contraseña para alternar la visibilidad.");
+                }
+            });
+        });
+
+        formGerente.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const carnet = carnetGerenteInput.value.trim();
+            const originalCarnet = originalCarnetGerenteInput.value.trim();
+            const nombre = nombreGerenteInput.value.trim();
+            const password = passGerenteInput.value.trim();
+            const email = emailGerenteInput.value.trim();
+            
+            const esEdicion = originalCarnet !== ''; 
+            let carnet_para_url = ''; 
+            let url = '';
+            let metodo = '';
+
+            if (!carnet || !nombre || !email) {
+                M.toast({html: 'Carnet, nombre y email son obligatorios.', classes: 'red'});
+                return;
+            }
+
+            if (!esEdicion) {
+                metodo = 'post';
+                url = '/api/gerentes/'; 
+                if (!password) { 
+                    M.toast({html: 'La contraseña es obligatoria para nuevos gerentes.', classes: 'red'});
+                    return;
+                }
+            } else { 
+                metodo = 'put';
+                carnet_para_url = originalCarnet; 
+                url = `/api/gerentes/${carnet_para_url}/`;
+            }
+
+            const gerenteData = {
+                carnet_gerente: carnet,
+                nombre: nombre,
+                password: (esEdicion && !password) ? undefined : password, 
+                email: email,
+                tipo_usuario: 'gerente'
+            };
+
+            axios({
+                method: metodo,
+                url: url,
+                data: gerenteData
+            })
+            .then(response => {
+                M.toast({html: `Gerente ${esEdicion ? 'actualizado' : 'registrado'} exitosamente`, classes: 'green'});
+                const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
+                modal.close();
+                formGerente.reset();
+                M.updateTextFields();
+                cargarGerentes();
+                resetSeleccion();
+            })
+            .catch(error => {
+                console.error('Error en la operación del gerente:', error.response ? error.response.data : error.message);
+                let errorMessage = 'Verifique la consola para detalles';
+                if (error.response && error.response.data && error.response.data.error) {
+                    errorMessage = error.response.data.error;
+                } else if (error.response && error.response.status === 409) {
+                    errorMessage = "El carnet de gerente ya existe. Por favor, use uno diferente.";
+                }
+                M.toast({html: `Error al ${esEdicion ? 'actualizar' : 'registrar'} gerente: ` + errorMessage, classes: 'red'});
+            });
+        });
+
+        function cargarGerentes() {
+            axios.get('/api/gerentes/')
+                .then(response => {
+                    gerentes = response.data;
+                    renderizarTabla();
+                })
+                .catch(error => {
+                    console.error('Error cargando gerentes:', error.response ? error.response.data : error.message);
+                    M.toast({html: 'Error al cargar gerentes', classes: 'red'});
+                    // MODIFICACIÓN: Usar 'no-data-row' y 'center-align'
+                    tablaGerentes.innerHTML = `<tr><td colspan="4" class="no-data-row center-align">Error al cargar gerentes. Intente de nuevo más tarde.</td></tr>`;
+                });
+        }
+
+        function renderizarTabla() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const filteredGerentes = gerentes.filter(gerente =>
+                gerente.nombre.toLowerCase().includes(searchTerm) ||
+                gerente.carnet_gerente.toLowerCase().includes(searchTerm) ||
+                gerente.email.toLowerCase().includes(searchTerm)
+            );
+
+            tablaGerentes.innerHTML = ''; // Limpiar la tabla antes de renderizar
+
+            if (filteredGerentes.length === 0) {
+                const tr = document.createElement('tr');
+                // MODIFICACIÓN: Añadir las clases 'no-data-row' y 'center-align'
+                tr.classList.add('no-data-row'); 
+                tr.classList.add('center-align'); 
+
+                let message = '';
+                if (searchTerm === '') {
+                    message = 'No hay gerentes registrados en el sistema.';
+                } else {
+                    message = 'No hay gerentes que coincidan con la búsqueda.';
+                }
+
+                // MODIFICACIÓN: Asegurar que el colspan cubra todas las columnas (4 en este caso)
+                tr.innerHTML = `<td colspan="4">${message}</td>`; 
+                tablaGerentes.appendChild(tr);
+            } else {
+                tablaGerentes.innerHTML = filteredGerentes.map(gerente => `
+                    <tr data-carnet="${gerente.carnet_gerente}">
+                        <td><i class="material-icons">person</i></td>
+                        <td>${gerente.nombre}</td>
+                        <td>${gerente.carnet_gerente}</td>
+                        <td>${gerente.email}</td>
+                    </tr>
+                `).join('');
+            }
+
+            resetSeleccion();
+        }
+
+        btnAgregarGerente.addEventListener('click', function() {
+            modalTitulo.textContent = 'Agregar gerente';
+            btnAccion.textContent = 'Registrar';
+            btnEliminar.style.display = 'none';
+            formGerente.reset();
+            originalCarnetGerenteInput.value = '';
+            carnetGerenteInput.readOnly = false;
+            
+            passGerenteInput.type = 'password';
+            const currentToggleIcon = passGerenteInput.parentElement.querySelector('.toggle-password');
+            if (currentToggleIcon) {
+                currentToggleIcon.textContent = 'visibility';
+            }
+            M.updateTextFields();
+        });
+
+        searchInput.addEventListener('input', function() {
+            renderizarTabla();
+        });
+
+        function resetSeleccion() {
+            gerenteSeleccionado = null;
+            document.querySelectorAll('#tablaGerentes tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+            btnEditar.style.display = 'none';
+            btnEliminar.style.display = 'none'; // Asegúrate de que el botón de eliminar también se oculte
+        }
+    });
+</script>
 </body>
 </html>
