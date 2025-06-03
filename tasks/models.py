@@ -44,6 +44,7 @@ class Producto(models.Model):
     foto_producto = models.ImageField(max_length=254, blank=True, null=True)
     stock_minimo = models.IntegerField()
     tipo = models.CharField(max_length=10)
+    fecha_caducidad = models.DateField(blank=True, null=True)
 
     class Meta:
         managed = True
