@@ -35,16 +35,17 @@ class Gerente(models.Model):
 
 
 class Producto(models.Model):
-    id_producto = models.IntegerField(primary_key=True)
+    id_producto = models.CharField(primary_key=True, max_length=15)
     matricula_buque = models.ForeignKey(Buque, models.DO_NOTHING, db_column='matricula_buque', blank=True, null=True)
     carnet_gerente = models.ForeignKey(Gerente, models.DO_NOTHING, db_column='carnet_gerente', blank=True, null=True)
     carnet_admin = models.ForeignKey(Administrador, models.DO_NOTHING, db_column='carnet_admin', blank=True, null=True)
     nombre_producto = models.CharField(max_length=25)
     descripcion = models.CharField(max_length=100)
-    foto_producto = models.CharField(max_length=254)
+    foto_producto = models.ImageField(max_length=254, blank=True, null=True)
     stock_minimo = models.IntegerField()
-    tipo = models.CharField(max_length=3)
+    tipo = models.CharField(max_length=10)
+    fecha_caducidad = models.DateField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'producto'

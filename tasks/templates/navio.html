@@ -91,7 +91,7 @@
         <div class="modal-content">
             <h5 id="modalTitulo"></h5> 
             <form id="formNavio" action="" method="post">
-                {% csrf_token %}
+                {% csrf_token %} {# Este input hidden es para los formularios tradicionales, pero también nos ayuda a obtener el token para Axios #}
                 <input type="hidden" id="navioMatricula"> 
                 
                 <div class="input-field">
@@ -139,6 +139,32 @@
         M.Modal.init(elemsModal); 
         const modalNavioInstance = M.Modal.getInstance(document.getElementById('modalNavio'));
         
+        // --- Configuración de Axios para CSRF ---
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+        if (csrftoken) {
+            axios.defaults.headers.common['X-CSRFToken'] = csrftoken;
+        } else {
+            console.warn("CSRF token no encontrado. Las solicitudes sensibles pueden fallar.");
+        }
+        // --- Fin de la configuración de Axios para CSRF ---
+
+
         // Variables globales
         let navios = [];
         let gerentesDisponibles = []; 
@@ -260,7 +286,7 @@
                     });
             } else { 
                 // Lógica de creación (POST) - AQUI ES DONDE AÑADIMOS LA VALIDACIÓN OBLIGATORIA
-                if (!datos.carnet_gerente || datos.carnet_gerente === "") { // <--- AÑADIDA VALIDACIÓN
+                if (!datos.carnet_gerente || datos.carnet_gerente === "") { 
                     M.toast({html: 'Debe seleccionar un gerente para crear un navío.', classes: 'red'});
                     return; 
                 }
@@ -465,6 +491,6 @@
             );
         }
     });
-</script>
+    </script>
 </body>
 </html>

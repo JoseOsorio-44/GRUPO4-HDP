@@ -432,7 +432,6 @@
                     message = 'No hay gerentes que coincidan con la búsqueda.';
                 }
 
-                // MODIFICACIÓN: Asegurar que el colspan cubra todas las columnas (4 en este caso)
                 tr.innerHTML = `<td colspan="4">${message}</td>`; 
                 tablaGerentes.appendChild(tr);
             } else {
@@ -475,7 +474,7 @@
                 row.classList.remove('selected');
             });
             btnEditar.style.display = 'none';
-            btnEliminar.style.display = 'none'; // Asegúrate de que el botón de eliminar también se oculte
+            btnEliminar.style.display = 'none'; 
         }
     });
 </script>

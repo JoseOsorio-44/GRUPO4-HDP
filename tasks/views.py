@@ -198,7 +198,6 @@ def ver_navios(request):
 #creacion de lista y de buque
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "POST"])
-@csrf_exempt
 def buque_list_create(request):
     if request.method == 'GET':
         buques_data = []
@@ -285,6 +284,7 @@ def buque_list_create(request):
 #update y delete de buque
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["PUT", "DELETE"])
+@csrf_exempt
 def buque_retrieve_update_delete(request, matricula_buque):
     buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
 
