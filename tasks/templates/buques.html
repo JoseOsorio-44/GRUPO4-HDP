@@ -69,7 +69,6 @@
 <body>
     <script src="{% static 'js/materialize.min.js' %}"></script>
 
-
 <nav class="blue darken-1">
     <div class="nav-wrapper">
         <a href="{% url 'admin_view' %}" class="brand-logo">
@@ -96,7 +95,8 @@
             </div>
 
             <div class="col s12 m3"> <!-- Botón Agregar Navío -->
-                <a id="btnAgregarNavio" class="waves-effect waves-light btn teal" style="width: 100%;">
+                <!-- El atributo modal-trigger y href ya están aquí para que Materialize lo maneje -->
+                <a id="btnAgregarNavio" class="waves-effect waves-light btn teal modal-trigger" href="#modalNavio" style="width: 100%;">
                     <i class="material-icons left">add</i>Agregar Navío
                 </a>
             </div>
@@ -186,7 +186,7 @@
         </div>
     </div>
 
-    <!-- ADAPTACIÓN: Nuevo Modal de Confirmación de Eliminación -->
+    <!-- Nuevo Modal de Confirmación de Eliminación -->
     <div id="confirmDeleteModal" class="modal">
         <div class="modal-content">
             <h4>Confirmar Eliminación</h4>
@@ -204,7 +204,7 @@
         const elemsModal = document.querySelectorAll('.modal');
         M.Modal.init(elemsModal); 
         const modalNavioInstance = M.Modal.getInstance(document.getElementById('modalNavio'));
-        // ADAPTACIÓN: Inicializar el nuevo modal de confirmación
+        // Inicializar el nuevo modal de confirmación
         const confirmDeleteModalInstance = M.Modal.getInstance(document.getElementById('confirmDeleteModal'));
         
         // --- Configuración de Axios para CSRF ---
@@ -241,7 +241,8 @@
         // Elementos del DOM
         const tablaNavios = document.getElementById('tablaNavios');
         const formNavio = document.getElementById('formNavio');
-        const btnAgregarNavio = document.getElementById('btnAgregarNavio'); // Botón en el encabezado
+        // Referencia al botón de agregar navío
+        const btnAgregarNavio = document.getElementById('btnAgregarNavio'); 
 
         // Referencias a los FABs individuales
         const fabEliminarNavioDiv = document.getElementById('fabEliminarNavio'); 
@@ -255,7 +256,7 @@
         // Referencia al botón de eliminar dentro del modal
         const btnEliminarNavioModal = document.getElementById('btnEliminarNavioModal');
 
-        // ADAPTACIÓN: Referencias a elementos del modal de confirmación
+        // Referencias a elementos del modal de confirmación
         const navioToDeleteNameSpan = document.getElementById('navioToDeleteName');
         const navioToDeleteMatriculaSpan = document.getElementById('navioToDeleteMatricula');
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
@@ -263,10 +264,9 @@
 
         const modalTitulo = document.getElementById('modalTitulo');
         const btnAccion = document.getElementById('btnAccion');
-        const navioMatriculaInput = document.getElementById('matriculaBuque'); // Cambiado de navioMatriculaInput a matriculaBuqueInput para ser consistente
+        const matriculaBuqueInput = document.getElementById('matriculaBuque'); 
         const selectGerente = document.getElementById('gerenteNavio');
         const searchInput = document.getElementById('search');
-        // const matriculaBuqueInput = document.getElementById('matriculaBuque'); // Ya se usa matriculaBuqueInput arriba
 
         // Cargar datos iniciales: navíos y gerentes
         cargarDatosIniciales();
@@ -309,8 +309,9 @@
 
         // Event listener para el botón "Agregar Navío" en el encabezado
         btnAgregarNavio.addEventListener('click', function() {
+            // Materialize ya abre el modal debido a `modal-trigger` y `href`.
+            // Solo necesitamos preparar el formulario.
             prepararModalParaAgregar();
-            modalNavioInstance.open(); 
         });
 
         // Event listener para el botón "Editar" (flotante independiente)
@@ -332,28 +333,29 @@
             window.location.href = `/inventario/${navioSeleccionado.matricula_buque}/`;
         });
 
-        // ADAPTACIÓN: Event listener para el botón "Eliminar" (flotante independiente)
+        // Event listener para el botón "Eliminar" (flotante independiente)
         btnEliminarNavio.addEventListener('click', function() {
             if (!navioSeleccionado) {
                 M.toast({html: 'Por favor, seleccione un navío para eliminar.', classes: 'orange'});
                 return;
             }
-            // ADAPTACIÓN: Mostrar el modal de confirmación en lugar de confirm()
+            // Mostrar el modal de confirmación en lugar de confirm()
             navioToDeleteNameSpan.textContent = navioSeleccionado.nombre_buque;
             navioToDeleteMatriculaSpan.textContent = navioSeleccionado.matricula_buque;
             confirmDeleteModalInstance.open();
         });
 
-        // ADAPTACIÓN: Event listener para el botón "Eliminar" dentro del modal
+        // Event listener para el botón "Eliminar" dentro del modal
         btnEliminarNavioModal.addEventListener('click', function() {
             // Reutiliza la lógica del FAB de eliminar
             btnEliminarNavio.click();
         });
 
-        // ADAPTACIÓN: Lógica de eliminación cuando se confirma en el modal de confirmación
+        // Lógica de eliminación cuando se confirma en el modal de confirmación
         confirmDeleteBtn.addEventListener('click', function() {
             if (navioSeleccionado) {
                 const id = navioSeleccionado.matricula_buque;
+                console.log(`DEBUG: Enviando solicitud DELETE a: /api/navios/${id}/`); // Depuración
                 axios.delete(`/api/navios/${id}/`) 
                     .then(() => {
                         M.toast({html: 'Navío eliminado correctamente', classes: 'green'});
@@ -365,7 +367,7 @@
                         cargarDatosIniciales(); 
                     })
                     .catch(error => {
-                        console.error("Delete failed error (Axios):", error.response || error); 
+                        console.error("Error al eliminar (Axios):", error.response || error); 
                         const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Hubo un problema al eliminar el navío.';
                         M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
                         confirmDeleteModalInstance.close(); // Cerrar el modal de confirmación incluso si hay error
@@ -377,7 +379,7 @@
         formNavio.addEventListener('submit', function(event) {
             event.preventDefault(); 
 
-            const matriculaOriginalParaPut = navioMatriculaInput.value; 
+            const matriculaOriginalParaPut = matriculaBuqueInput.value; 
             
             const datos = {
                 nombre_buque: document.getElementById('nombreNavio').value.trim(),
@@ -389,8 +391,9 @@
             if (!datos.nombre_buque) { M.toast({html: 'El nombre del navío es obligatorio.', classes: 'red'}); return; }
             if (!datos.matricula_buque) { M.toast({html: 'La matrícula es obligatoria.', classes: 'red'}); return; }
             
-            if (matriculaOriginalParaPut) { 
+            if (matriculaOriginalParaPut && !modalTitulo.textContent.includes('Agregar')) { // Asegurarse de que es una edición
                 // Lógica de actualización (PUT)
+                console.log(`DEBUG: Enviando solicitud PUT a: /api/navios/${matriculaOriginalParaPut}/ con datos:`, datos); // Depuración
                 axios.put(`/api/navios/${matriculaOriginalParaPut}/`, datos) 
                     .then(response => {
                         M.toast({html: response.data.message || 'Navío actualizado correctamente', classes: 'green'});
@@ -398,6 +401,7 @@
                         cargarDatosIniciales(); 
                     })
                     .catch(error => {
+                        console.error("Error al actualizar (Axios):", error.response || error); // Depuración
                         const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Hubo un problema al actualizar.';
                         M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
                     });
@@ -407,14 +411,21 @@
                     M.toast({html: 'Debe seleccionar un gerente para crear un navío.', classes: 'red'});
                     return; 
                 }
-
-                axios.post('/api/navios/', datos)
+                console.log(`DEBUG: Enviando solicitud POST a: /api/navios/ con datos:`, datos); // Depuración
+                // ADAPTACIÓN: Enviar datos como JSON para la creación
+                axios.post('/api/navios/', datos, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken // Asegurarse de enviar el CSRF token también para JSON
+                    }
+                })
                     .then(response => {
                         M.toast({html: response.data.message || 'Navío agregado correctamente', classes: 'green'});
                         modalNavioInstance.close(); 
                         cargarDatosIniciales(); 
                     })
                     .catch(error => {
+                        console.error("Error al agregar (Axios):", error.response || error); // Depuración
                         const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Hubo un problema al agregar.';
                         M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
                     });
@@ -424,7 +435,7 @@
 
         function prepararModalParaAgregar() {
             formNavio.reset(); 
-            navioMatriculaInput.value = ''; 
+            matriculaBuqueInput.value = ''; 
             matriculaBuqueInput.readOnly = false; 
             modalTitulo.textContent = 'Agregar navío'; 
             btnAccion.textContent = 'Registrar'; 
@@ -447,7 +458,7 @@
             btnAccion.textContent = 'Actualizar'; 
             btnEliminarNavioModal.style.display = 'inline-block'; // Mostrar el botón de eliminar del modal
 
-            navioMatriculaInput.value = navio.matricula_buque.trim(); 
+            matriculaBuqueInput.value = navio.matricula_buque.trim(); 
             document.getElementById('nombreNavio').value = navio.nombre_buque.trim();
             matriculaBuqueInput.value = navio.matricula_buque.trim();
             matriculaBuqueInput.readOnly = true; 
@@ -517,6 +528,7 @@
                 cargarTablaNavios(navierosFiltrados(), hayNaviosRegistrados); 
                 resetSeleccion(); 
             } catch (error) {
+                console.error("Error al cargar datos iniciales (Axios):", error.response || error); // Depuración
                 const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Error al cargar datos. Verifique la conexión o el servidor.';
                 M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
             }

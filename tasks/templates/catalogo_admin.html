@@ -21,21 +21,7 @@
         .tabla-productos tr.selected {
             background-color: #e3f2fd !important;
         }
-        /* ADAPTACIÓN: Ocultar los botones FAB por defecto, se mostrarán con JS */
-        /* Este estilo es para el FAB principal que contiene los sub-botones */
-        .fixed-action-btn {
-            position: fixed;
-            bottom: 23px;
-            right: 24px;
-            z-index: 998;
-            /* Los sub-botones se controlan por el JS del FAB de Materialize */
-        }
-        .fixed-action-btn ul {
-            left: initial;
-            right: 0;
-            text-align: right;
-        }
-
+        
         .file-field .btn {
             margin-top: 10px;
         }
@@ -74,6 +60,43 @@
         .search-filter-row .select-wrapper input.select-dropdown {
             margin-bottom: 0; 
         }
+
+        /* Estilos para los botones flotantes independientes con animación (estilo navios.html) */
+        #fabAgregarProductoContainer {
+            position: fixed;
+            bottom: 23px; /* Posición más baja */
+            right: 24px;
+            z-index: 998;
+        }
+
+        #fabEditarProductoContainer,
+        #fabEliminarProductoContainer {
+            position: fixed;
+            right: 24px;
+            z-index: 998;
+            opacity: 0; /* Inicialmente transparentes */
+            transform: translateY(20px); /* Inicialmente ligeramente abajo */
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* Transición para ambos */
+            display: none; /* Oculto por defecto */
+        }
+
+        #fabEditarProductoContainer {
+            bottom: 85px; /* Posición media */
+        }
+        #fabEliminarProductoContainer {
+            bottom: 147px; /* Posición más alta */
+        }
+
+        /* Asegurar que los colores de los FABs no se desvanezcan */
+        .btn-floating.green {
+            background-color: #4CAF50 !important; /* Verde Materialize */
+        }
+        .btn-floating.blue {
+            background-color: #2196F3 !important; /* Azul Materialize */
+        }
+        .btn-floating.red {
+            background-color: #F44336 !important; /* Rojo Materialize */
+        }
     </style>
 </head>
 <body>
@@ -96,7 +119,7 @@
     <div class="container">
         <div class="row">
             <div class="col s12 info-navio">
-                <h5 id="nombreNavio">Información del Buque: {{ buque.nombre_buque }}</h5>
+                <h5 id="nombreNavio">{{ buque.nombre_buque }}</h5>
                 <p><strong>Matrícula:</strong> {{ buque.matricula_buque }}</p>
                 <p id="gerenteNavio"><strong>Gerente Asignado:</strong> {{ buque.carnet_gerente.nombre_gerente|default_if_none:"N/A" }}</p>
             </div>
@@ -123,7 +146,7 @@
             </div>
 
             <div class="col s12 m2"> 
-                <a id="btnAlertas" class="btn yellow darken-2 waves-effect waves-light" style="width: 100%;">
+                <a id="btnAlertas" class="btn yellow darken-2 waves-light" style="width: 100%;">
                     <i class="material-icons">warning</i> Alertas
                 </a>
             </div>
@@ -148,14 +171,23 @@
             </div>
         </div>
 
-        <div class="fixed-action-btn" id="productFab">
-            <a class="btn-floating btn-large waves-effect waves-light red modal-trigger" href="#modalProducto" id="btnAgregarProductoFab">
+        <!-- Botones flotantes de acción (Agregar, Editar, Eliminar) - Ahora independientes -->
+        <div class="fixed-action-btn" id="fabAgregarProductoContainer">
+            <a class="btn-floating btn-large green modal-trigger" href="#modalProducto" id="btnAgregarProductoFab">
                 <i class="material-icons">add</i>
             </a>
-            <ul>
-                <li><a class="btn-floating blue" id="btnEditarProductoFab"><i class="material-icons">edit</i></a></li>
-                <li><a class="btn-floating orange" id="btnEliminarProductoFab"><i class="material-icons">delete</i></a></li>
-            </ul>
+        </div>
+
+        <div class="fixed-action-btn" id="fabEditarProductoContainer">
+            <a class="btn-floating btn-large blue modal-trigger" href="#modalProducto" id="btnEditarProductoFab">
+                <i class="material-icons">edit</i>
+            </a>
+        </div>
+
+        <div class="fixed-action-btn" id="fabEliminarProductoContainer">
+            <a class="btn-floating btn-large red" id="btnEliminarProductoFab">
+                <i class="material-icons">delete</i>
+            </a>
         </div>
 
         <div id="modalProducto" class="modal">
@@ -216,10 +248,9 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn waves-effect waves-light green" type="submit" name="action">Guardar
-                            <i class="material-icons right">send</i>
+                        <button class="btn  waves-light green" type="submit" name="action">Guardar
                         </button>
-                        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+                        <a href="#!" class="modal-close waves-green btn-flat">Cancelar</a>
                     </div>
                 </form>
             </div>
@@ -231,7 +262,7 @@
                 <p>¿Estás seguro de que quieres eliminar el producto "<strong id="productoToDeleteName"></strong>" con código "<strong id="productoToDeleteId"></strong>"? Esta acción es irreversible.</p>
             </div>
             <div class="modal-footer">
-                <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+                <a href="#!" class="modal-close waves-green btn-flat">Cancelar</a>
                 <a href="#!" id="confirmDeleteProductoBtn" class="waves-effect waves-red btn red">Eliminar</a>
             </div>
         </div>
@@ -272,17 +303,18 @@
             const modalProductoInstance = M.Modal.getInstance(document.getElementById('modalProducto'));
             const confirmDeleteProductoModalInstance = M.Modal.getInstance(document.getElementById('confirmDeleteProductoModal'));
 
-            // Inicializar FAB
-            var fabElems = document.querySelectorAll('.fixed-action-btn');
-            const fabInstance = M.FloatingActionButton.init(fabElems, {
-                direction: 'left', 
-                hoverEnabled: false 
-            })[0]; 
+            // Obtener referencias a los contenedores de los FABs individuales
+            const fabAgregarProductoContainer = document.getElementById('fabAgregarProductoContainer');
+            const fabEditarProductoContainer = document.getElementById('fabEditarProductoContainer');
+            const fabEliminarProductoContainer = document.getElementById('fabEliminarProductoContainer');
+
+            // No inicializamos los FABs individuales con M.FloatingActionButton.init
+            // ya que su visibilidad se controla directamente con JS para este comportamiento específico.
 
             const tablaProductosBody = document.getElementById('tablaProductosBody');
-            const btnAgregarProductoFab = document.getElementById('btnAgregarProductoFab'); // Referencia al FAB principal
-            const btnEditarProductoFab = document.getElementById('btnEditarProductoFab'); // Sub-botón del FAB
-            const btnEliminarProductoFab = document.getElementById('btnEliminarProductoFab'); // Sub-botón del FAB
+            const btnAgregarProductoFab = document.getElementById('btnAgregarProductoFab'); 
+            const btnEditarProductoFab = document.getElementById('btnEditarProductoFab'); 
+            const btnEliminarProductoFab = document.getElementById('btnEliminarProductoFab'); 
 
             const modalProducto = document.getElementById('modalProducto');
             const modalTitle = document.getElementById('modalTitle');
@@ -329,6 +361,13 @@
                     weekdaysAbbrev: ['D', 'L', 'M', 'M', 'J', 'V', 'S']
                 }
             });
+
+            // ADAPTACIÓN: Añadir evento onCloseEnd al modal para asegurar que los FABs de edición/eliminación se oculten
+            modalProductoInstance.options.onCloseEnd = function() {
+                // Al cerrar el modal, asegúrate de que no haya una fila seleccionada
+                // Esto ocultará automáticamente los FABs de editar/eliminar.
+                resetSeleccion(); 
+            };
 
             tipoProductoSelect.addEventListener('change', function() {
                 if (this.value === 'provision') {
@@ -403,6 +442,7 @@
                         <td>${producto.stock_minimo}</td>
                     `;
                     tablaProductosBody.appendChild(row);
+                    console.log("DEBUG: Producto añadido a la tabla:", producto.id_producto);
                 });
                 resetSeleccion(); 
             }
@@ -421,17 +461,44 @@
                 selectedRow = row;
                 selectedRow.classList.add('selected');
                 
-                if (fabInstance) {
-                    fabInstance.open();
-                } 
+                // Mostrar los FABs de editar y eliminar con animación
+                console.log("DEBUG FAB SHOW: Setting display to block for edit/delete FABs.");
+                fabEditarProductoContainer.style.display = 'block'; 
+                fabEliminarProductoContainer.style.display = 'block'; 
+                
+                // Forzar un reflow para que la transición se aplique correctamente
+                fabEditarProductoContainer.offsetWidth; // Trigger reflow
+                fabEliminarProductoContainer.offsetWidth; // Trigger reflow
+
+                console.log("DEBUG FAB SHOW: Setting opacity and transform for edit/delete FABs.");
+                fabEditarProductoContainer.style.opacity = '1'; 
+                fabEditarProductoContainer.style.transform = 'translateY(0)'; 
+                fabEliminarProductoContainer.style.opacity = '1'; 
+                fabEliminarProductoContainer.style.transform = 'translateY(0)'; 
             });
 
             document.addEventListener('click', function(e) {
                 const clickedInsideTable = e.target.closest('.tabla-productos');
-                const clickedInsideFAB = e.target.closest('.fixed-action-btn');
+                const clickedInsideModal = e.target.closest('.modal');
+                const clickedInsideAddFabContainer = e.target.closest('#fabAgregarProductoContainer');
+                const clickedInsideEditFabContainer = e.target.closest('#fabEditarProductoContainer');
+                const clickedInsideDeleteFabContainer = e.target.closest('#fabEliminarProductoContainer');
 
-                if (!clickedInsideTable && !clickedInsideFAB && selectedRow) {
+                // Si hay una fila seleccionada Y el clic no fue dentro de la tabla, ni dentro de un modal,
+                // Y NO fue directamente sobre NINGÚN contenedor de FAB
+                if (selectedRow && !clickedInsideTable && !clickedInsideModal && 
+                    !clickedInsideAddFabContainer && !clickedInsideEditFabContainer && !clickedInsideDeleteFabContainer) {
+                    console.log("DEBUG: Triggering resetSeleccion() from document click because click was outside relevant areas.");
                     resetSeleccion();
+                } else {
+                    console.log("DEBUG: Document click - NOT triggering resetSeleccion(). Conditions:", {
+                        selectedRow: !!selectedRow, // Convert to boolean for cleaner log
+                        clickedInsideTable: !!clickedInsideTable,
+                        clickedInsideModal: !!clickedInsideModal,
+                        clickedInsideAddFabContainer: !!clickedInsideAddFabContainer,
+                        clickedInsideEditFabContainer: !!clickedInsideEditFabContainer,
+                        clickedInsideDeleteFabContainer: !!clickedInsideDeleteFabContainer
+                    });
                 }
             });
 
@@ -440,12 +507,23 @@
                     selectedRow.classList.remove('selected');
                 }
                 selectedRow = null;
-                if (fabInstance) {
-                    fabInstance.close();
-                } 
+                
+                // Ocultar los FABs de editar y eliminar con animación
+                console.log("DEBUG FAB HIDE: Setting opacity and transform for edit/delete FABs.");
+                fabEditarProductoContainer.style.opacity = '0'; 
+                fabEditarProductoContainer.style.transform = 'translateY(20px)'; 
+                fabEliminarProductoContainer.style.opacity = '0'; 
+                fabEliminarProductoContainer.style.transform = 'translateY(20px)'; 
+
+                // Establecer display a 'none' después de que la transición termine
+                setTimeout(() => {
+                    console.log("DEBUG FAB HIDE: Setting display to none for edit/delete FABs after transition.");
+                    fabEditarProductoContainer.style.display = 'none'; 
+                    fabEliminarProductoContainer.style.display = 'none';
+                }, 300); // Coincide con la duración de la transición CSS
             }
 
-            btnAgregarProductoFab.addEventListener('click', function() { // Cambiado a btnAgregarProductoFab
+            btnAgregarProductoFab.addEventListener('click', function() { 
                 isEditing = false;
                 modalTitle.textContent = 'Nuevo Producto';
                 formProducto.reset();
@@ -472,7 +550,7 @@
                 modalInstance.open();
             });
 
-            btnEditarProductoFab.addEventListener('click', function() { // Cambiado a btnEditarProductoFab
+            btnEditarProductoFab.addEventListener('click', function() { 
                 if (selectedRow) {
                     isEditing = true;
                     modalTitle.textContent = 'Editar Producto';
@@ -541,7 +619,7 @@
                 }
             });
 
-            btnEliminarProductoFab.addEventListener('click', function() { // Cambiado a btnEliminarProductoFab
+            btnEliminarProductoFab.addEventListener('click', function() { 
                 if (selectedRow) {
                     // Mostrar el modal de confirmación en lugar de confirm()
                     const id = selectedRow.dataset.id.trim();
@@ -585,7 +663,9 @@
             formProducto.addEventListener('submit', function(e) {
                 e.preventDefault();
 
+                console.log("DEBUG: Form submit initiated. Is Editing:", isEditing); 
                 const formData = new FormData(formProducto);
+
                 formData.set('tipo', tipoProductoSelect.value); 
 
                 if (tipoProductoSelect.value === 'provision' && fechaCaducidadInput.value) {
@@ -690,9 +770,9 @@
                 }
                 
                 if (productosCaducados.length > 0) {
-                    if (mensaje) mensaje += '\n\n';
+                    if (mensaje) mensaje += '\n\\n';
                     mensaje += `Productos caducados (${productosCaducados.length}):\n`;
-                    mensajeCaducados = productosCaducados.map(p => `- ${p.nombre_producto} (${p.fecha_caducidad})`).join('\n'); 
+                    mensajeCaducados = productosCaducados.map(p => `- ${p.nombre_producto} (${p.fecha_caducidad})`).join('\\n'); 
                     mensaje += mensajeCaducados;
                 }
 
@@ -702,8 +782,6 @@
                     M.toast({html: 'No hay alertas de productos.', classes: 'green'});
                 }
             });
-
-      
 
         });
     </script>

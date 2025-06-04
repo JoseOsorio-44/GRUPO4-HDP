@@ -181,7 +181,13 @@
 
             <div class="col s12 m3"> <!-- Botón Agregar Gerente -->
                 <a class="waves-effect waves-light btn teal modal-trigger" href="#modalGerente" id="btnAgregarGerente" style="width: 100%;">
-                    <i class="material-icons left">add</i>Agregar Gerente
+                    <i class="material-icons left">add</i>Gerente
+                </a>
+            </div>
+            
+            <div class="col s12 m3"> <!-- Nuevo Botón Agregar Administrador -->
+                <a class="waves-effect waves-light btn green modal-trigger" href="#modalAdministrador" id="btnAgregarAdministrador" style="width: 100%;">
+                    <i class="material-icons left">add</i>Administrador
                 </a>
             </div>
         </div>
@@ -261,6 +267,36 @@
         </div>
     </div>
 
+    <!-- Nuevo Modal para Agregar Administrador -->
+    <div id="modalAdministrador" class="modal">
+        <div class="modal-content">
+            <h5>Agregar Nuevo Administrador</h5>
+            <form id="formAdministrador">
+                {% csrf_token %}
+                <div class="input-field">
+                    <input id="carnetAdmin" name="carnet_admin" type="text" required>
+                    <label for="carnetAdmin">Carnet del Administrador</label>
+                </div>
+                <div class="input-field">
+                    <input id="nombreAdmin" name="nombre_admin" type="text" required> 
+                    <label for="nombreAdmin">Nombre del Administrador</label>
+                </div>
+                <div class="input-field">
+                    <input id="passAdmin" name="password_admin" type="password" required> 
+                    <label for="passAdmin">Contraseña</label>
+                    <span toggle="#passAdmin" class="material-icons prefix right field-icon toggle-password">visibility</span>
+                </div>
+                {# Campo de email eliminado, ya que no está en el modelo Administrador #}
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" form="formAdministrador" class="waves-effect waves-light btn green">
+                Registrar
+            </button>
+            <a href="#!" class="modal-close waves-effect btn-flat">Cancelar</a>
+        </div>
+    </div>
+
     <!-- Nuevo Modal de Confirmación de Eliminación para Gerentes -->
     <div id="confirmDeleteGerenteModal" class="modal">
         <div class="modal-content">
@@ -280,23 +316,26 @@
 
         // Inicializar el nuevo modal de confirmación para gerentes
         const confirmDeleteGerenteModalInstance = M.Modal.getInstance(document.getElementById('confirmDeleteGerenteModal'));
+        const modalAdministradorInstance = M.Modal.getInstance(document.getElementById('modalAdministrador')); // Instancia del nuevo modal
 
         axios.defaults.xsrfCookieName = 'csrftoken';
         axios.defaults.xsrfHeaderName = 'X-CSRFToken';
 
         let gerentes = [];
-        let assignedGerentesCarnets = new Set(); // ADAPTACIÓN: Conjunto para almacenar carnets de gerentes asignados
+        let assignedGerentesCarnets = new Set(); // Conjunto para almacenar carnets de gerentes asignados
         let gerenteSeleccionado = null;
 
         const tablaGerentes = document.getElementById('tablaGerentes');
         const formGerente = document.getElementById('formGerente');
+
         // Referencias a los FABs individuales
         const fabEditarGerenteDiv = document.getElementById('fabEditarGerente');
         const fabEliminarGerenteDiv = document.getElementById('fabEliminarGerente');
         const btnEditarGerente = fabEditarGerenteDiv.querySelector('a'); // El <a> dentro del FAB de Editar
         const btnEliminarGerente = fabEliminarGerenteDiv.querySelector('a'); // El <a> dentro del FAB de Eliminar
+
         // Referencia al botón de eliminar dentro del modal
-        const btnEliminarGerenteModal = document.getElementById('btnEliminarGerenteModal'); 
+        const btnEliminarGerenteModal = document.getElementById('btnEliminarGerenteModal');
 
         // Referencias a elementos del modal de confirmación
         const gerenteToDeleteNameSpan = document.getElementById('gerenteToDeleteName');
@@ -313,7 +352,17 @@
         const searchInput = document.getElementById('search'); 
         const btnAgregarGerente = document.getElementById('btnAgregarGerente');
         
+        // Seleccionamos todos los iconos de toggle de contraseña
         const togglePasswordIcons = document.querySelectorAll('.toggle-password');
+
+        // Referencias para el nuevo modal de Administrador
+        const btnAgregarAdministrador = document.getElementById('btnAgregarAdministrador');
+        const formAdministrador = document.getElementById('formAdministrador');
+        const carnetAdminInput = document.getElementById('carnetAdmin');
+        const nombreAdminInput = document.getElementById('nombreAdmin');
+        const passAdminInput = document.getElementById('passAdmin');
+        // No hay emailAdminInput ya que no está en el modelo
+
 
         cargarGerentes();
 
@@ -431,6 +480,7 @@
             }
         });
 
+        // Bucle para adjuntar el evento de clic a todos los iconos de toggle de contraseña
         togglePasswordIcons.forEach(icon => {
             icon.addEventListener('click', function() {
                 const targetId = this.getAttribute('toggle');
@@ -512,6 +562,10 @@
             });
         });
 
+        searchInput.addEventListener('input', function() {
+            renderizarTabla();
+        });
+
         async function cargarGerentes() { 
             try {
                 const [gerentesResponse, naviosResponse] = await Promise.all([
@@ -530,17 +584,17 @@
                 renderizarTabla();
             } catch (error) {
                 console.error('Error cargando gerentes o navíos:', error.response ? error.response.data : error.message);
-                M.toast({html: 'Error al cargar gerentes', classes: 'red'});
-                tablaGerentes.innerHTML = `<tr><td colspan="5" class="no-data-row center-align">Error al cargar gerentes. Intente de nuevo más tarde.</td></tr>`; // ADAPTACIÓN: Colspan 5
+                M.toast({html: 'Error al cargar gerentes. Intente de nuevo más tarde.', classes: 'red'});
+                tablaGerentes.innerHTML = `<tr><td colspan="5" class="no-data-row center-align">Error al cargar gerentes. Intente de nuevo más tarde.</td></tr>`; 
             }
         }
 
         function renderizarTabla() {
             const searchTerm = searchInput.value.toLowerCase().trim();
-            const filteredGerentes = gerentes.filter(gerente =>
-                gerente.nombre.toLowerCase().includes(searchTerm) ||
-                gerente.carnet_gerente.toLowerCase().includes(searchTerm) ||
-                gerente.email.toLowerCase().includes(searchTerm)
+            const filteredGerentes = gerentes.filter(g =>
+                g.nombre.toLowerCase().includes(searchTerm) ||
+                g.carnet_gerente.toLowerCase().includes(searchTerm) ||
+                g.email.toLowerCase().includes(searchTerm)
             );
 
             tablaGerentes.innerHTML = ''; // Limpiar la tabla antes de renderizar
@@ -557,11 +611,10 @@
                     message = 'No hay gerentes que coincidan con la búsqueda.';
                 }
 
-                tr.innerHTML = `<td colspan="5">${message}</td>`; // ADAPTACIÓN: Colspan 5
+                tr.innerHTML = `<td colspan="5">${message}</td>`; 
                 tablaGerentes.appendChild(tr);
             } else {
                 tablaGerentes.innerHTML = filteredGerentes.map(gerente => {
-                    // ADAPTACIÓN: Determinar el estado del gerente
                     const estado = assignedGerentesCarnets.has(String(gerente.carnet_gerente)) ? 'Asignado' : 'Disponible';
                     return `
                         <tr data-carnet="${gerente.carnet_gerente}">
@@ -569,7 +622,7 @@
                             <td>${gerente.nombre}</td>
                             <td>${gerente.carnet_gerente}</td>
                             <td>${gerente.email}</td>
-                            <td>${estado}</td> <!-- ADAPTACIÓN: Nueva celda para el estado -->
+                            <td>${estado}</td> 
                         </tr>
                     `;
                 }).join('');
@@ -615,7 +668,50 @@
 
             btnEliminarGerenteModal.style.display = 'none'; 
         }
+
+        // NUEVA FUNCIÓN: Agregar Administrador
+        formAdministrador.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(formAdministrador);
+            
+            // Validar campos requeridos en el frontend antes de enviar
+            if (!carnetAdminInput.value.trim() || !nombreAdminInput.value.trim() || !passAdminInput.value.trim()) {
+                M.toast({html: 'Todos los campos de administrador son obligatorios.', classes: 'red'});
+                return;
+            }
+
+            axios.post('/api/administradores/', formData) // Asume este endpoint para administradores
+                .then(response => {
+                    M.toast({html: response.data.message, classes: 'green darken-2'});
+                    modalAdministradorInstance.close();
+                    formAdministrador.reset(); // Limpiar el formulario después de éxito
+                    M.updateTextFields(); // Actualizar labels
+                })
+                .catch(error => {
+                    console.error("Error al agregar administrador:", error.response || error);
+                    let errorMessage = 'Error al agregar administrador.';
+                    if (error.response && error.response.data && error.response.data.errors) {
+                        errorMessage = Object.values(error.response.data.errors).flat().join('<br>');
+                    } else if (error.response && error.response.data && error.response.data.error) {
+                        errorMessage = error.response.data.error;
+                    }
+                    M.toast({html: errorMessage, classes: 'red darken-2'});
+                });
+        });
+
+        // Asegurarse de que los campos del modal de administrador se actualicen al abrir
+        btnAgregarAdministrador.addEventListener('click', function() {
+            formAdministrador.reset();
+            passAdminInput.type = 'password';
+            const currentToggleIcon = passAdminInput.parentElement.querySelector('.toggle-password');
+            if (currentToggleIcon) {
+                currentToggleIcon.textContent = 'visibility';
+            }
+            M.updateTextFields();
+            modalAdministradorInstance.open();
+        });
+
     });
-</script>
+    </script>
 </body>
 </html>

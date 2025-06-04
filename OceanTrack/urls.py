@@ -13,6 +13,8 @@ urlpatterns = [
     path('dashboard/gerente/', views.gerente_dashboard, name='gerente_view'),
     path('Denegado/', views.sin_permisos, name='no_permission'),
     path('logout/', views.logout_view, name='logout'),
+    
+    path('api/administradores/', views.api_administrador_create, name='api_administrador_create'),
 
     # Rutas para Gerentes (que ya tenías)
     path('api/gerentes/list/', views.gerente_list, name='api_gerente_list'),

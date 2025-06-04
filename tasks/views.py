@@ -73,7 +73,7 @@ def autentificacion_usuario(request):
 def admin_dashboard(request):
     carnet_admin_logueado = request.session.get('username')
     rol_logueado = request.session.get('user_role')
-    return render(request, 'gerente.html', {
+    return render(request, 'gerentes.html', {
         'username': carnet_admin_logueado,
         'role': rol_logueado
     })
@@ -94,7 +94,7 @@ def gerente_dashboard(request):
 
 #vista de sin permisos
 def sin_permisos(request):
-    return render(request, 'sinpermiso.html', {
+    return render(request, 'vista_denegada.html', {
         'message': 'No tienes los permisos necesarios para acceder a esta sección.',
         'username': request.session.get('username', 'Invitado')
     })
@@ -193,7 +193,7 @@ def gerente_retrieve_update_delete(request, carnet_gerente):
 #vista de navios
 @role_required(allowed_roles=['admin'])
 def ver_navios(request):
-    return render(request, 'navio.html')
+    return render(request, 'buques.html')
 
 
 #creacion de lista y de buque
@@ -284,14 +284,18 @@ def buque_list_create(request):
 
 #update y delete de buque
 @role_required(allowed_roles=['admin'])
-@require_http_methods(["PUT", "DELETE"])
+@require_http_methods(["GET", "PUT", "DELETE"]) 
 def buque_retrieve_update_delete(request, matricula_buque):
-    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
+    matricula_buque_cleaned = matricula_buque.strip() 
+
+    try:
+        buque = get_object_or_404(Buque, matricula_buque=matricula_buque_cleaned)
+    except Exception as e:
+        print(f"Error al buscar buque {matricula_buque_cleaned}: {e}")
+        return JsonResponse({'error': 'Navío no encontrado o error en la búsqueda.'}, status=404)
+
 
     if request.method == 'PUT':
-        if request.session.get('user_role') != 'admin':
-            return JsonResponse({'error': 'Acceso denegado. Solo los administradores pueden actualizar navíos.'}, status=403)
-
         try:
             data = json.loads(request.body)
             nuevo_nombre_buque = data.get('nombre_buque')
@@ -302,7 +306,7 @@ def buque_retrieve_update_delete(request, matricula_buque):
             if not nuevo_nombre_buque or not nuevo_matricula_buque:
                 return JsonResponse({'error': 'El nombre del navío y la matrícula son obligatorios.'}, status=400)
 
-            if Buque.objects.filter(matricula_buque=nuevo_matricula_buque).exclude(matricula_buque=matricula_buque).exists():
+            if Buque.objects.filter(matricula_buque=nuevo_matricula_buque).exclude(matricula_buque=matricula_buque_cleaned).exists():
                 return JsonResponse({'error': f'La matrícula "{nuevo_matricula_buque}" ya existe en otro navío. Por favor, ingrese una matrícula única.'}, status=409)
 
             old_gerente = buque.carnet_gerente
@@ -338,22 +342,34 @@ def buque_retrieve_update_delete(request, matricula_buque):
             return JsonResponse({'error': f'{str(e)}'}, status=500)
 
     elif request.method == 'DELETE':
-        if request.session.get('user_role') != 'admin':
-            return JsonResponse({'error': 'Acceso denegado. Solo los administradores pueden eliminar navíos.'}, status=403)
         try:
+
+            productos_eliminados_count, _ = Producto.objects.filter(matricula_buque=buque).delete()
+            print(f"DEBUG: Se eliminaron {productos_eliminados_count} productos asociados al navío {buque.matricula_buque}.")
+
             if buque.carnet_gerente:
                 gerente_asociado = buque.carnet_gerente
                 gerente_asociado.matricula_buque = None
                 gerente_asociado.save()
 
             buque.delete()
-            return JsonResponse({'message': 'Navío eliminado correctamente'}, status=204)
+            return JsonResponse({'message': 'Navío y productos asociados eliminados correctamente'}, status=204)
         except Exception as e:
             traceback.print_exc()
             return JsonResponse({'error': f'Error interno del servidor al eliminar navío: {str(e)}'}, status=500)
 
-    return JsonResponse({'error': 'Método HTTP no permitido.'}, status=405)
+    elif request.method == 'GET':
+        # Retorna los datos del buque
+        buque_data = {
+            'matricula_buque': buque.matricula_buque,
+            'nombre_buque': buque.nombre_buque,
+            'servicio': buque.servicio,
+            'carnet_gerente': buque.carnet_gerente.carnet_gerente if buque.carnet_gerente else None,
+            'nombre_gerente_asignado': buque.carnet_gerente.nombre if buque.carnet_gerente else None,
+        }
+        return JsonResponse(buque_data)
 
+    return JsonResponse({'error': 'Método HTTP no permitido.'}, status=405)
 
 #lista de gerentes para select
 @role_required(allowed_roles=['admin'])
@@ -424,7 +440,7 @@ def producto_list_create(request):
 def catalogo_view(request, matricula_buque):
     buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
     productos = Producto.objects.filter(matricula_buque=buque)
-    return render(request, 'catalogo.html', {'buque': buque, 'productos': productos})
+    return render(request, 'catalogo_admin.html', {'buque': buque, 'productos': productos})
 
 
 
@@ -439,7 +455,7 @@ def api_productos_list_create(request, matricula_buque):
         data = []
         for producto in productos:
             data.append({
-                'id_producto': producto.id_producto.strip() if producto.id_producto else None, # Asegurar que el ID se limpia al enviar
+                'id_producto': producto.id_producto.strip() if producto.id_producto else None, 
                 'nombre_producto': producto.nombre_producto,
                 'descripcion': producto.descripcion,
                 'cantidad': producto.cantidad,
@@ -459,7 +475,7 @@ def api_productos_list_create(request, matricula_buque):
 
             id_producto = data.get('id_producto')
             if id_producto:
-                id_producto = id_producto.strip() # <<< CRÍTICO: Recortar espacios para la creación
+                id_producto = id_producto.strip() 
 
             nombre_producto = data.get('nombre_producto')
             cantidad = data.get('cantidad')
@@ -477,6 +493,20 @@ def api_productos_list_create(request, matricula_buque):
             if tipo == 'provision' and not fecha_caducidad:
                 return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para las provisiones.']}}, status=400)
 
+            admin_username = request.session.get('username')
+            admin_instance = None
+            if admin_username:
+                try:
+                    admin_instance = Administrador.objects.get(carnet_admin=admin_username)
+                except Administrador.DoesNotExist:
+                    return JsonResponse({'error': f'Administrador con carnet "{admin_username}" no encontrado.'}, status=400)
+                except Exception as e:
+                    traceback.print_exc()
+                    return JsonResponse({'error': f'Error al obtener instancia de Administrador: {str(e)}'}, status=500)
+            else:
+                return JsonResponse({'error': 'No se pudo obtener el carnet del administrador de la sesión.'}, status=401)
+
+
             new_producto = Producto(
                 matricula_buque=buque,
                 id_producto=id_producto,
@@ -486,6 +516,7 @@ def api_productos_list_create(request, matricula_buque):
                 stock_minimo=stock_minimo,
                 tipo=tipo,
                 fecha_caducidad=fecha_caducidad if fecha_caducidad else None,
+                carnet_admin = admin_instance 
             )
             
             if 'foto_producto' in request.FILES:
@@ -497,7 +528,9 @@ def api_productos_list_create(request, matricula_buque):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Request body must be valid JSON or FormData'}, status=400)
         except Exception as e:
+            traceback.print_exc() 
             return JsonResponse({'error': str(e)}, status=500)
+
 
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "POST"])
@@ -515,7 +548,23 @@ def api_producto_detail_update_delete(request, matricula_buque, id_producto):
             producto.descripcion = data.get('descripcion', producto.descripcion)
             producto.cantidad = data.get('cantidad', producto.cantidad)
             producto.stock_minimo = data.get('stock_minimo', producto.stock_minimo)
-            producto.tipo = data.get('tipo', producto.tipo) # Asigna el valor entrante directamente
+            producto.tipo = data.get('tipo', producto.tipo)
+            
+            admin_username = request.session.get('username')
+            admin_instance = None
+            if admin_username:
+                try:
+                    admin_instance = Administrador.objects.get(carnet_admin=admin_username)
+                except Administrador.DoesNotExist:
+                    return JsonResponse({'error': f'Administrador con carnet "{admin_username}" no encontrado para la actualización.'}, status=400)
+                except Exception as e:
+                    traceback.print_exc()
+                    return JsonResponse({'error': f'Error al obtener instancia de Administrador para actualización: {str(e)}'}, status=500)
+            else:
+                return JsonResponse({'error': 'No se pudo obtener el carnet del administrador de la sesión para la actualización.'}, status=401)
+            
+            producto.carnet_admin = admin_instance 
+
 
             fecha_caducidad_str = data.get('fecha_caducidad')
             if producto.tipo == 'provision' and not fecha_caducidad_str:
@@ -545,11 +594,11 @@ def api_producto_detail_update_delete(request, matricula_buque, id_producto):
                         print(f"Error al intentar eliminar imagen por checkbox: {e}")
                 producto.foto_producto = None
             
-            # producto.full_clean() # Descomenta si quieres activar la validación completa del modelo
             producto.save()
             return JsonResponse({'message': 'Producto actualizado exitosamente'}, status=200)
 
         except Exception as e:
+            traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=500)
 
     elif request.method == 'POST' and request.POST.get('_method') == 'DELETE':
@@ -568,9 +617,10 @@ def api_producto_detail_update_delete(request, matricula_buque, id_producto):
             return JsonResponse({'message': 'Producto eliminado exitosamente'}, status=204)
 
         except Exception as e:
+            traceback.print_exc()
             return JsonResponse({'error': str(e)}, status=500)
 
-    elif request.method == 'POST': # Manejo de creación de producto (POST sin _method=PUT/DELETE)
+    elif request.method == 'POST': 
         try:
             data = request.POST.dict()
             files = request.FILES
@@ -589,7 +639,9 @@ def api_producto_detail_update_delete(request, matricula_buque, id_producto):
                 descripcion=data.get('descripcion'),
                 cantidad=data.get('cantidad'),
                 stock_minimo=data.get('stock_minimo'),
-                tipo=data.get('tipo'), # Asigna el valor directamente
+                tipo=data.get('tipo'),
+                carnet_admin = request.session.get('username') 
+                
             )
 
             fecha_caducidad_str = data.get('fecha_caducidad')
@@ -600,11 +652,11 @@ def api_producto_detail_update_delete(request, matricula_buque, id_producto):
             if 'foto_producto' in files:
                 nuevo_producto.foto_producto = files['foto_producto']
 
-            # nuevo_producto.full_clean() # Descomenta si quieres activar la validación completa del modelo
             nuevo_producto.save()
             return JsonResponse({'message': 'Producto creado exitosamente'}, status=201)
 
         except Exception as e:
+            traceback.print_exc() 
             return JsonResponse({'error': str(e)}, status=500)
 
     elif request.method == 'GET':
@@ -621,3 +673,49 @@ def api_producto_detail_update_delete(request, matricula_buque, id_producto):
         return JsonResponse(producto_data)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+
+@require_http_methods(["POST"])
+def api_administrador_create(request):
+    try:
+        data = request.POST.dict()
+        print(f"DEBUG VIEWS (Administrador): Datos recibidos para creación: {data}")
+
+        carnet_admin = data.get('carnet_admin', '').strip()
+        nombre_admin = data.get('nombre_admin', '').strip()
+        password_admin = data.get('password_admin', '')
+
+        if not carnet_admin:
+            return JsonResponse({'errors': {'carnet_admin': ['El carnet del administrador es obligatorio.']}}, status=400)
+        if not nombre_admin:
+            return JsonResponse({'errors': {'nombre_admin': ['El nombre del administrador es obligatorio.']}}, status=400)
+        if not password_admin:
+            return JsonResponse({'errors': {'password_admin': ['La contraseña es obligatoria.']}}, status=400)
+        
+        if len(carnet_admin) > 8:
+            return JsonResponse({'errors': {'carnet_admin': ['El carnet no puede exceder los 8 caracteres.']}}, status=400)
+        if len(nombre_admin) > 30:
+            return JsonResponse({'errors': {'nombre_admin': ['El nombre no puede exceder los 30 caracteres.']}}, status=400)
+        if len(password_admin) > 15:
+            return JsonResponse({'errors': {'password_admin': ['La contraseña no puede exceder los 15 caracteres.']}}, status=400)
+
+
+        if Administrador.objects.filter(carnet_admin=carnet_admin).exists():
+            print(f"DEBUG VIEWS (Administrador): Intento de crear administrador con carnet duplicado: {carnet_admin}")
+            return JsonResponse({'errors': {'carnet_admin': ['Ya existe un administrador con este carnet.']}}, status=400)
+
+        nuevo_administrador = Administrador(
+            carnet_admin=carnet_admin,
+            nombre_admin=nombre_admin,
+            password_admin=password_admin 
+        )
+        
+        nuevo_administrador.save()
+        print(f"DEBUG VIEWS (Administrador): Administrador '{carnet_admin}' creado exitosamente.")
+        return JsonResponse({'message': 'Administrador creado exitosamente'}, status=201)
+
+    except Exception as e:
+        print(f"ERROR VIEWS (Administrador): Error en la creación del administrador: {e}")
+        # Puedes añadir más detalle si es un ValidationError de Django
+        return JsonResponse({'error': str(e)}, status=500)
