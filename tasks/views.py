@@ -4,7 +4,6 @@ from tasks.models import Administrador, Gerente, Buque, Producto
 from django.contrib import messages
 from django.urls import reverse
 from .decorator import role_required
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 import traceback
@@ -286,7 +285,6 @@ def buque_list_create(request):
 #update y delete de buque
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["PUT", "DELETE"])
-@csrf_exempt
 def buque_retrieve_update_delete(request, matricula_buque):
     buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
 
@@ -380,7 +378,6 @@ def gerente_list(request):
 
 @role_required(allowed_roles=['admin', 'gerente'])
 @require_http_methods(["GET", "POST"])
-@csrf_exempt
 def producto_list_create(request):
     if request.method == 'GET':
         gerentes_data = []
@@ -432,7 +429,7 @@ def catalogo_view(request, matricula_buque):
 
 
 
-@csrf_exempt
+@role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "POST"])
 def api_productos_list_create(request, matricula_buque):
     buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
@@ -502,7 +499,7 @@ def api_productos_list_create(request, matricula_buque):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
-@csrf_exempt
+@role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "POST"])
 def api_producto_detail_update_delete(request, matricula_buque, id_producto):
     id_producto = id_producto.strip() 

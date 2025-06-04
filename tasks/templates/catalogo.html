@@ -2,675 +2,710 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>OceanTrack - Inventario</title>
-  <link rel="stylesheet" href="{% static 'css/materialize.min.css' %}">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <style>
-    .info-navio {
-      margin-top: 20px;
-      padding: 15px;
-      background-color: #e3f2fd;
-      border-radius: 5px;
-    }
-    .tabla-productos {
-      margin-top: 20px;
-    }
-    .tabla-productos tr.selected {
-      background-color: #e3f2fd !important;
-    }
-    /* ADAPTACIÓN: Ocultar los botones FAB por defecto, se mostrarán con JS */
-    /* Este estilo es para el FAB principal que contiene los sub-botones */
-    .fixed-action-btn {
-      position: fixed;
-      bottom: 23px;
-      right: 24px;
-      z-index: 998;
-      /* Los sub-botones se controlan por el JS del FAB de Materialize */
-    }
-    .fixed-action-btn ul {
-      left: initial;
-      right: 0;
-      text-align: right;
-    }
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> {# Axios cargado aquí #}
+    <meta charset="UTF-8">
+    <title>OceanTrack - Inventario</title>
+    <link rel="stylesheet" href="{% static 'css/materialize.min.css' %}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        .info-navio {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-radius: 5px;
+        }
+        .tabla-productos {
+            margin-top: 20px;
+        }
+        .tabla-productos tr.selected {
+            background-color: #e3f2fd !important;
+        }
+        /* ADAPTACIÓN: Ocultar los botones FAB por defecto, se mostrarán con JS */
+        /* Este estilo es para el FAB principal que contiene los sub-botones */
+        .fixed-action-btn {
+            position: fixed;
+            bottom: 23px;
+            right: 24px;
+            z-index: 998;
+            /* Los sub-botones se controlan por el JS del FAB de Materialize */
+        }
+        .fixed-action-btn ul {
+            left: initial;
+            right: 0;
+            text-align: right;
+        }
 
-    .file-field .btn {
-      margin-top: 10px;
-    }
-    .fecha-caducidad {
-      display: none; /* Oculto por defecto, se muestra solo para provisiones */
-    }
+        .file-field .btn {
+            margin-top: 10px;
+        }
+        .fecha-caducidad {
+            display: none; /* Oculto por defecto, se muestra solo para provisiones */
+        }
 
-    .datepicker-date-display {
-      display: none !important; /* Oculta la parte superior del DatePicker */
-    }
+        .datepicker-date-display {
+            display: none !important; /* Oculta la parte superior del DatePicker */
+        }
 
-    /* Estilos para centrar la barra de búsqueda y el botón de agregar */
-    .search-filter-row {
-        margin-top: 20px;
-        display: flex;
-        align-items: flex-end; 
-        gap: 15px; 
-        justify-content: center; 
-    }
+        /* Estilos para centrar la barra de búsqueda y el botón de agregar */
+        .search-filter-row {
+            margin-top: 20px;
+            display: flex;
+            align-items: flex-end; 
+            gap: 15px; 
+            justify-content: center; 
+        }
 
-    .search-filter-row .input-field {
-        margin-bottom: 0; 
-    }
-    
-    .search-filter-row .btn {
-        margin-bottom: 0; 
-    }
-    
-    #filtroCategoria + label {
-        top: -14px !important; 
-        font-size: 0.8rem !important; 
-        transform: translateY(0) scale(0.8) !important; 
-        -webkit-transform: translateY(0) scale(0.8) !important;
-    }
+        .search-filter-row .input-field {
+            margin-bottom: 0; 
+        }
+        
+        .search-filter-row .btn {
+            margin-bottom: 0; 
+        }
+        
+        #filtroCategoria + label {
+            top: -14px !important; 
+            font-size: 0.8rem !important; 
+            transform: translateY(0) scale(0.8) !important; 
+            -webkit-transform: translateY(0) scale(0.8) !important;
+        }
 
-    .search-filter-row .select-wrapper input.select-dropdown {
-        margin-bottom: 0; 
-    }
-  </style>
+        .search-filter-row .select-wrapper input.select-dropdown {
+            margin-bottom: 0; 
+        }
+    </style>
 </head>
 <body>
-  <script src="{% static 'js/materialize.min.js' %}"></script> 
+    <script src="{% static 'js/materialize.min.js' %}"></script> 
 
-  <nav class="blue darken-1">
-    <div class="nav-wrapper">
-        <a href="{% url 'admin_view' %}" class="brand-logo">
-            <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-right: 10px; vertical-align: middle;">
-            <span>OceanTrack</span>
-        </a>
-        <a href="#!" class="brand-logo center">Inventario</a>
-        <ul class="right hide-on-med-and-down">
-            <li><a href="{% url 'buques' %}"><i class="material-icons left">directions_boat</i>Volver a Navíos</a></li>
-            <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
-        </ul>
-    </div>
-</nav>
-
-  <div class="container">
-    <div class="row">
-      <div class="col s12 info-navio">
-        <h5 id="nombreNavio">Información del Buque: {{ buque.nombre_buque }}</h5>
-        <p><strong>Matrícula:</strong> {{ buque.matricula_buque }}</p>
-        <p id="gerenteNavio"><strong>Gerente Asignado:</strong> {{ buque.carnet_gerente.nombre_gerente|default_if_none:"N/A" }}</p>
-      </div>
-    </div>
-
-    <div class="row search-filter-row">
-      <!-- Barra de búsqueda -->
-      <div class="col s12 m7"> 
-        <div class="input-field">
-          <i class="material-icons prefix">search</i>
-          <input id="search" type="text" placeholder="Buscar producto">
-          <label for="search">Buscar</label>
+    <nav class="blue darken-1">
+        <div class="nav-wrapper">
+            <a href="{% url 'admin_view' %}" class="brand-logo">
+                <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-right: 10px; vertical-align: middle;">
+                <span>OceanTrack</span>
+            </a>
+            <a href="#!" class="brand-logo center">Inventario</a>
+            <ul class="right hide-on-med-and-down">
+                <li><a href="{% url 'buques' %}"><i class="material-icons left">directions_boat</i>Volver a Navíos</a></li>
+                <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
+            </ul>
         </div>
-      </div>
+    </nav>
 
-      <!-- Selector de categoría -->
-      <div class="col s12 m3"> 
-        <div class="input-field">
-          <select id="filtroCategoria">
-            <option value="" selected>Todas</option>
-            <option value="provision">Provisión</option>
-            <option value="repuesto">Repuesto</option>
-          </select>
-          <label for="filtroCategoria">Categorías</label>
+    <div class="container">
+        <div class="row">
+            <div class="col s12 info-navio">
+                <h5 id="nombreNavio">Información del Buque: {{ buque.nombre_buque }}</h5>
+                <p><strong>Matrícula:</strong> {{ buque.matricula_buque }}</p>
+                <p id="gerenteNavio"><strong>Gerente Asignado:</strong> {{ buque.carnet_gerente.nombre_gerente|default_if_none:"N/A" }}</p>
+            </div>
         </div>
-      </div>
 
-      <!-- Botón de alertas -->
-      <div class="col s12 m2"> 
-        <a id="btnAlertas" class="btn yellow darken-2 waves-effect waves-light" style="width: 100%;">
-          <i class="material-icons">warning</i> Alertas
-        </a>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col s12 tabla-productos">
-        <table class="striped highlight responsive-table">
-          <thead>
-            <tr>
-              <th></th> 
-              <th>Código</th> 
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Cantidad</th>
-              <th>Stock Mínimo</th>
-            </tr>
-          </thead>
-          <tbody id="tablaProductosBody">
-            </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Botón flotante de acción para productos -->
-    <div class="fixed-action-btn" id="productFab">
-      <a class="btn-floating btn-large waves-effect waves-light red modal-trigger" href="#modalProducto" id="btnAgregarProductoFab">
-        <i class="material-icons">add</i>
-      </a>
-      <ul>
-        <li><a class="btn-floating blue" id="btnEditarProductoFab"><i class="material-icons">edit</i></a></li>
-        <li><a class="btn-floating orange" id="btnEliminarProductoFab"><i class="material-icons">delete</i></a></li>
-      </ul>
-    </div>
-
-    <div id="modalProducto" class="modal">
-      <div class="modal-content">
-        <h4><span id="modalTitle">Nuevo Producto</span></h4>
-        <form id="formProducto" enctype="multipart/form-data">
-          {% csrf_token %}
-          <input type="hidden" id="productoIdHidden" name="id_producto">
-          <input type="hidden" id="methodField" name="_method">
-          <div class="row">
-            <div class="input-field col s12">
-              <input id="productoIdInput" type="text" name="id_producto_display" required>
-              <label for="productoIdInput">Código del Producto</label>
-            </div>
-            <div class="input-field col s12">
-              <input id="nombreProducto" type="text" name="nombre_producto" required>
-              <label for="nombreProducto">Nombre del Producto</label>
-            </div>
-            <div class="input-field col s12">
-              <textarea id="descripcion" class="materialize-textarea" name="descripcion"></textarea>
-              <label for="descripcion">Descripción</label>
-            </div>
-            <div class="input-field col s6">
-              <input id="cantidad" type="number" name="cantidad" required min="0">
-              <label for="cantidad">Cantidad</label>
-            </div>
-            <div class="input-field col s6">
-              <input id="stockMinimo" type="number" name="stock_minimo" required min="0">
-              <label for="stockMinimo">Stock Mínimo</label>
-            </div>
-            <div class="input-field col s12">
-              <select id="tipoProducto" name="tipo" required>
-                <option value="" disabled selected>Selecciona el tipo</option>
-                <option value="provision">Provisión</option>
-                <option value="repuesto">Repuesto</option>
-              </select>
-              <label>Tipo de Producto</label>
-            </div>
-            <div class="input-field col s12 fecha-caducidad">
-              <input id="fechaCaducidad" type="text" class="datepicker" name="fecha_caducidad">
-              <label for="fechaCaducidad">Fecha de Caducidad</label>
-            </div>
-            <div class="file-field input-field col s12">
-                <div class="btn">
-                    <span>Imagen</span>
-                    <input type="file" id="fotoProducto" name="foto_producto" accept="image/*">
+        <div class="row search-filter-row">
+            <div class="col s12 m7"> 
+                <div class="input-field">
+                    <i class="material-icons prefix">search</i>
+                    <input id="search" type="text" placeholder="Buscar producto">
+                    <label for="search">Buscar</label>
                 </div>
-                <div class="file-path-wrapper">
-                    <input class="file-path validate" type="text" placeholder="Selecciona una imagen">
-                </div>
-                <p>
-                    <label>
-                        <input type="checkbox" class="filled-in" id="eliminarImagenCheckbox" />
-                        <span>Eliminar imagen actual (si existe)</span>
-                    </label>
-                </p>
-                <div id="imagenActualPreview" style="margin-top: 10px;"></div>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn waves-effect waves-light green" type="submit" name="action">Guardar
-              <i class="material-icons right">send</i>
-            </button>
-            <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
-          </div>
-        </form>
-      </div>
+
+            <div class="col s12 m3"> 
+                <div class="input-field">
+                    <select id="filtroCategoria">
+                        <option value="" selected>Todas</option>
+                        <option value="provision">Provisión</option>
+                        <option value="repuesto">Repuesto</option>
+                    </select>
+                    <label for="filtroCategoria">Categorías</label>
+                </div>
+            </div>
+
+            <div class="col s12 m2"> 
+                <a id="btnAlertas" class="btn yellow darken-2 waves-effect waves-light" style="width: 100%;">
+                    <i class="material-icons">warning</i> Alertas
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col s12 tabla-productos">
+                <table class="striped highlight responsive-table">
+                    <thead>
+                        <tr>
+                            <th></th> 
+                            <th>Código</th> 
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Cantidad</th>
+                            <th>Stock Mínimo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaProductosBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="fixed-action-btn" id="productFab">
+            <a class="btn-floating btn-large waves-effect waves-light red modal-trigger" href="#modalProducto" id="btnAgregarProductoFab">
+                <i class="material-icons">add</i>
+            </a>
+            <ul>
+                <li><a class="btn-floating blue" id="btnEditarProductoFab"><i class="material-icons">edit</i></a></li>
+                <li><a class="btn-floating orange" id="btnEliminarProductoFab"><i class="material-icons">delete</i></a></li>
+            </ul>
+        </div>
+
+        <div id="modalProducto" class="modal">
+            <div class="modal-content">
+                <h4><span id="modalTitle">Nuevo Producto</span></h4>
+                <form id="formProducto" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" id="productoIdHidden" name="id_producto">
+                    <input type="hidden" id="methodField" name="_method">
+                    <div class="row">
+                        <div class="input-field col s12">
+                            <input id="productoIdInput" type="text" name="id_producto_display" required>
+                            <label for="productoIdInput">Código del Producto</label>
+                        </div>
+                        <div class="input-field col s12">
+                            <input id="nombreProducto" type="text" name="nombre_producto" required>
+                            <label for="nombreProducto">Nombre del Producto</label>
+                        </div>
+                        <div class="input-field col s12">
+                            <textarea id="descripcion" class="materialize-textarea" name="descripcion"></textarea>
+                            <label for="descripcion">Descripción</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <input id="cantidad" type="number" name="cantidad" required min="0">
+                            <label for="cantidad">Cantidad</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <input id="stockMinimo" type="number" name="stock_minimo" required min="0">
+                            <label for="stockMinimo">Stock Mínimo</label>
+                        </div>
+                        <div class="input-field col s12">
+                            <select id="tipoProducto" name="tipo" required>
+                                <option value="" disabled selected>Selecciona el tipo</option>
+                                <option value="provision">Provisión</option>
+                                <option value="repuesto">Repuesto</option>
+                            </select>
+                            <label>Tipo de Producto</label>
+                        </div>
+                        <div class="input-field col s12 fecha-caducidad">
+                            <input id="fechaCaducidad" type="text" class="datepicker" name="fecha_caducidad">
+                            <label for="fechaCaducidad">Fecha de Caducidad</label>
+                        </div>
+                        <div class="file-field input-field col s12">
+                            <div class="btn">
+                                <span>Imagen</span>
+                                <input type="file" id="fotoProducto" name="foto_producto" accept="image/*">
+                            </div>
+                            <div class="file-path-wrapper">
+                                <input class="file-path validate" type="text" placeholder="Selecciona una imagen">
+                            </div>
+                            <p>
+                                <label>
+                                    <input type="checkbox" class="filled-in" id="eliminarImagenCheckbox" />
+                                    <span>Eliminar imagen actual (si existe)</span>
+                                </label>
+                            </p>
+                            <div id="imagenActualPreview" style="margin-top: 10px;"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn waves-effect waves-light green" type="submit" name="action">Guardar
+                            <i class="material-icons right">send</i>
+                        </button>
+                        <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="confirmDeleteProductoModal" class="modal">
+            <div class="modal-content">
+                <h4>Confirmar Eliminación</h4>
+                <p>¿Estás seguro de que quieres eliminar el producto "<strong id="productoToDeleteName"></strong>" con código "<strong id="productoToDeleteId"></strong>"? Esta acción es irreversible.</p>
+            </div>
+            <div class="modal-footer">
+                <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+                <a href="#!" id="confirmDeleteProductoBtn" class="waves-effect waves-red btn red">Eliminar</a>
+            </div>
+        </div>
+
     </div>
 
-  </div>
-
-  <!-- Nuevo Modal de Confirmación de Eliminación para Productos -->
-  <div id="confirmDeleteProductoModal" class="modal">
-      <div class="modal-content">
-          <h4>Confirmar Eliminación</h4>
-          <p>¿Estás seguro de que quieres eliminar el producto "<strong id="productoToDeleteName"></strong>" con código "<strong id="productoToDeleteId"></strong>"? Esta acción es irreversible.</p>
-      </div>
-      <div class="modal-footer">
-          <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
-          <a href="#!" id="confirmDeleteProductoBtn" class="waves-effect waves-red btn red">Eliminar</a>
-      </div>
-  </div>
-
-  <!-- Cargar jQuery ANTES de Materialize.js si tu versión de Materialize lo requiere -->
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script> 
-  <script src="{% static 'js/materialize.min.js' %}"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Inicializar todos los modales, incluyendo el de confirmación de producto
-      var modales = document.querySelectorAll('.modal');
-      M.Modal.init(modales);
-      const modalProductoInstance = M.Modal.getInstance(document.getElementById('modalProducto'));
-      const confirmDeleteProductoModalInstance = M.Modal.getInstance(document.getElementById('confirmDeleteProductoModal'));
-
-      // Inicializar FAB
-      var fabElems = document.querySelectorAll('.fixed-action-btn');
-      const fabInstance = M.FloatingActionButton.init(fabElems, {
-        direction: 'left', 
-        hoverEnabled: false 
-      })[0]; 
-
-      const tablaProductosBody = document.getElementById('tablaProductosBody');
-      const btnAgregarProductoFab = document.getElementById('btnAgregarProductoFab'); // Referencia al FAB principal
-      const btnEditarProductoFab = document.getElementById('btnEditarProductoFab'); // Sub-botón del FAB
-      const btnEliminarProductoFab = document.getElementById('btnEliminarProductoFab'); // Sub-botón del FAB
-
-      const modalProducto = document.getElementById('modalProducto');
-      const modalTitle = document.getElementById('modalTitle');
-      const formProducto = document.getElementById('formProducto');
-      const productoIdInput = document.getElementById('productoIdInput');
-      const productoIdHidden = document.getElementById('productoIdHidden');
-      const nombreProductoInput = document.getElementById('nombreProducto');
-      const descripcionInput = document.getElementById('descripcion');
-      const cantidadInput = document.getElementById('cantidad');
-      const stockMinimoInput = document.getElementById('stockMinimo');
-      const tipoProductoSelect = document.getElementById('tipoProducto');
-      const fechaCaducidadInput = document.getElementById('fechaCaducidad');
-      const fechaCaducidadDiv = document.querySelector('.fecha-caducidad');
-      const fotoProductoInput = document.getElementById('fotoProducto');
-      const imagenActualPreview = document.getElementById('imagenActualPreview');
-      const eliminarImagenCheckbox = document.getElementById('eliminarImagenCheckbox');
-      const methodField = document.getElementById('methodField');
-
-      const searchInput = document.getElementById('search');
-      const filtroCategoriaSelect = document.getElementById('filtroCategoria'); 
-      const btnAlertas = document.getElementById('btnAlertas');
-
-      // Referencias a elementos del modal de confirmación de producto
-      const productoToDeleteNameSpan = document.getElementById('productoToDeleteName');
-      const productoToDeleteIdSpan = document.getElementById('productoToDeleteId');
-      const confirmDeleteProductoBtn = document.getElementById('confirmDeleteProductoBtn');
-
-
-      let allProductos = []; 
-      let selectedRow = null;
-      let isEditing = false;
-      const matriculaBuque = "{{ buque.matricula_buque }}";
-
-      M.Datepicker.init(fechaCaducidadInput, {
-        format: 'yyyy-mm-dd',
-        autoClose: true,
-        i18n: {
-          cancel: 'Cancelar',
-          done: 'Ok',
-          months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-          monthsShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-          weekdays: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-          weekdaysShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
-          weekdaysAbbrev: ['D', 'L', 'M', 'M', 'J', 'V', 'S']
-        }
-      });
-
-      tipoProductoSelect.addEventListener('change', function() {
-        if (this.value === 'provision') {
-          fechaCaducidadDiv.style.display = 'block';
-        } else {
-          fechaCaducidadDiv.style.display = 'none';
-          fechaCaducidadInput.value = '';
-        }
-      });
-
-      function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-          const cookies = document.cookie.split(';');
-          for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-              break;
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script> 
+    <script src="{% static 'js/materialize.min.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Configuración de Axios para CSRF ---
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
             }
-          }
-        }
-        return cookieValue;
-      }
 
-      axios.defaults.headers.common['X-CSRFToken'] = getCookie('csrftoken');
-
-      function cargarProductos() {
-        axios.get(`/api/inventario/${matriculaBuque}/productos/`) 
-          .then(response => {
-            allProductos = response.data; 
-            aplicarFiltrosYRenderizar(); 
-          })
-          .catch(error => {
-            try {
-                const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar productos.';
-                M.toast({html: 'Error al cargar productos: ' + errorMessage, classes: 'red darken-2'});
-            } catch (toastError) {
-                alert('Error al cargar productos. Consulta la consola para más detalles.');
+            const csrftoken = getCookie('csrftoken');
+            if (csrftoken) {
+                axios.defaults.headers.common['X-CSRFToken'] = csrftoken;
+            } else {
+                console.warn("CSRF token no encontrado. Las solicitudes sensibles pueden fallar.");
             }
-            tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">Error al cargar productos.</td></tr>`; 
-          });
-      }
+            // --- Fin de la configuración de Axios para CSRF ---
 
-      function aplicarFiltrosYRenderizar() {
-        const searchTerm = searchInput.value.toLowerCase().trim();
-        const categoriaFiltro = filtroCategoriaSelect.value; 
+            // Inicializar todos los modales, incluyendo el de confirmación de producto
+            var modales = document.querySelectorAll('.modal');
+            M.Modal.init(modales);
+            const modalProductoInstance = M.Modal.getInstance(document.getElementById('modalProducto'));
+            const confirmDeleteProductoModalInstance = M.Modal.getInstance(document.getElementById('confirmDeleteProductoModal'));
 
-        const filtered = allProductos.filter(producto => {
-            const matchesSearch = producto.nombre_producto.toLowerCase().includes(searchTerm) || 
-                                  producto.descripcion.toLowerCase().includes(searchTerm) ||
-                                  producto.id_producto.toLowerCase().includes(searchTerm);
-            
-            const matchesCategory = !categoriaFiltro || String(producto.tipo).trim() === categoriaFiltro;
-            
-            return matchesSearch && matchesCategory; 
-        });
-        renderizarTabla(filtered);
-      }
+            // Inicializar FAB
+            var fabElems = document.querySelectorAll('.fixed-action-btn');
+            const fabInstance = M.FloatingActionButton.init(fabElems, {
+                direction: 'left', 
+                hoverEnabled: false 
+            })[0]; 
 
-      cargarProductos();
+            const tablaProductosBody = document.getElementById('tablaProductosBody');
+            const btnAgregarProductoFab = document.getElementById('btnAgregarProductoFab'); // Referencia al FAB principal
+            const btnEditarProductoFab = document.getElementById('btnEditarProductoFab'); // Sub-botón del FAB
+            const btnEliminarProductoFab = document.getElementById('btnEliminarProductoFab'); // Sub-botón del FAB
 
-      function renderizarTabla(productosAmostrar) {
-        tablaProductosBody.innerHTML = ''; 
+            const modalProducto = document.getElementById('modalProducto');
+            const modalTitle = document.getElementById('modalTitle');
+            const formProducto = document.getElementById('formProducto');
+            const productoIdInput = document.getElementById('productoIdInput');
+            const productoIdHidden = document.getElementById('productoIdHidden');
+            const nombreProductoInput = document.getElementById('nombreProducto');
+            const descripcionInput = document.getElementById('descripcion');
+            const cantidadInput = document.getElementById('cantidad');
+            const stockMinimoInput = document.getElementById('stockMinimo');
+            const tipoProductoSelect = document.getElementById('tipoProducto');
+            const fechaCaducidadInput = document.getElementById('fechaCaducidad');
+            const fechaCaducidadDiv = document.querySelector('.fecha-caducidad');
+            const fotoProductoInput = document.getElementById('fotoProducto');
+            const imagenActualPreview = document.getElementById('imagenActualPreview');
+            const eliminarImagenCheckbox = document.getElementById('eliminarImagenCheckbox');
+            const methodField = document.getElementById('methodField');
 
-        if (allProductos.length === 0) {
-            tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">No hay productos registrados en este buque.</td></tr>`; 
-            return;
-        }
+            const searchInput = document.getElementById('search');
+            const filtroCategoriaSelect = document.getElementById('filtroCategoria'); 
+            const btnAlertas = document.getElementById('btnAlertas');
 
-        if (productosAmostrar.length === 0) {
-            tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">No hay productos que coincidan con la búsqueda o el filtro.</td></tr>`; 
-            return;
-        }
+            // Referencias a elementos del modal de confirmación de producto
+            const productoToDeleteNameSpan = document.getElementById('productoToDeleteName');
+            const productoToDeleteIdSpan = document.getElementById('productoToDeleteId');
+            const confirmDeleteProductoBtn = document.getElementById('confirmDeleteProductoBtn');
 
-        productosAmostrar.forEach(producto => {
-          const row = document.createElement('tr');
-          row.setAttribute('data-id', producto.id_producto); 
-          row.innerHTML = `
-            <td><i class="material-icons">${producto.tipo.trim() === 'provision' ? 'fastfood' : 'build'}</i></td>
-            <td>${producto.id_producto}</td> 
-            <td>${producto.nombre_producto}</td>
-            <td>${producto.tipo.trim() === 'provision' ? 'Provisión' : 'Repuesto'}</td> 
-            <td>${producto.cantidad}</td>
-            <td>${producto.stock_minimo}</td>
-          `;
-          tablaProductosBody.appendChild(row);
-        });
-        resetSeleccion(); 
-      }
 
-      tablaProductosBody.addEventListener('click', function(e) {
-        let row = e.target.closest('tr');
-        if (!row || row.classList.contains('center-align')) { 
-            resetSeleccion(); 
-            return;
-        }
+            let allProductos = []; 
+            let selectedRow = null;
+            let isEditing = false;
+            const matriculaBuque = "{{ buque.matricula_buque }}";
 
-        document.querySelectorAll('#tablaProductosBody tr').forEach(r => {
-            r.classList.remove('selected');
-        });
+            M.Datepicker.init(fechaCaducidadInput, {
+                format: 'yyyy-mm-dd',
+                autoClose: true,
+                i18n: {
+                    cancel: 'Cancelar',
+                    done: 'Ok',
+                    months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+                    monthsShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+                    weekdays: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+                    weekdaysShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+                    weekdaysAbbrev: ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+                }
+            });
 
-        selectedRow = row;
-        selectedRow.classList.add('selected');
-        
-        if (fabInstance) {
-            fabInstance.open();
-        } 
-      });
+            tipoProductoSelect.addEventListener('change', function() {
+                if (this.value === 'provision') {
+                    fechaCaducidadDiv.style.display = 'block';
+                } else {
+                    fechaCaducidadDiv.style.display = 'none';
+                    fechaCaducidadInput.value = '';
+                }
+                // Importante: Reinicializar el select al cambiar su valor para que Materialize aplique los estilos
+                M.FormSelect.init(tipoProductoSelect); 
+            });
 
-      document.addEventListener('click', function(e) {
-        const clickedInsideTable = e.target.closest('.tabla-productos');
-        const clickedInsideFAB = e.target.closest('.fixed-action-btn');
+            function cargarProductos() {
+                axios.get(`/api/inventario/${matriculaBuque}/productos/`) 
+                    .then(response => {
+                        allProductos = response.data; 
+                        aplicarFiltrosYRenderizar(); 
+                        // Asegúrate de que el select de filtro de categoría también esté inicializado
+                        M.FormSelect.init(filtroCategoriaSelect);
+                    })
+                    .catch(error => {
+                        try {
+                            const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar productos.';
+                            M.toast({html: 'Error al cargar productos: ' + errorMessage, classes: 'red darken-2'});
+                        } catch (toastError) {
+                            alert('Error al cargar productos. Consulta la consola para más detalles.');
+                        }
+                        tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">Error al cargar productos.</td></tr>`; 
+                    });
+            }
 
-        if (!clickedInsideTable && !clickedInsideFAB && selectedRow) {
-          resetSeleccion();
-        }
-      });
+            function aplicarFiltrosYRenderizar() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                const categoriaFiltro = filtroCategoriaSelect.value; 
 
-      function resetSeleccion() {
-        if (selectedRow) {
-            selectedRow.classList.remove('selected');
-        }
-        selectedRow = null;
-        if (fabInstance) {
-            fabInstance.close();
-        } 
-      }
+                const filtered = allProductos.filter(producto => {
+                    const matchesSearch = producto.nombre_producto.toLowerCase().includes(searchTerm) || 
+                                          producto.descripcion.toLowerCase().includes(searchTerm) ||
+                                          producto.id_producto.toLowerCase().includes(searchTerm);
+                    
+                    const matchesCategory = !categoriaFiltro || String(producto.tipo).trim() === categoriaFiltro;
+                    
+                    return matchesSearch && matchesCategory; 
+                });
+                renderizarTabla(filtered);
+            }
 
-      btnAgregarProductoFab.addEventListener('click', function() { // Cambiado a btnAgregarProductoFab
-        isEditing = false;
-        modalTitle.textContent = 'Nuevo Producto';
-        formProducto.reset();
-        tipoProductoSelect.value = ''; 
-        M.FormSelect.getInstance(tipoProductoSelect).destroy();
-        M.FormSelect.init(tipoProductoSelect); 
+            cargarProductos();
 
-        productoIdInput.readOnly = false;
-        productoIdInput.name = 'id_producto'; 
-        productoIdHidden.name = ''; 
-        fechaCaducidadDiv.style.display = 'none';
-        imagenActualPreview.innerHTML = ''; 
-        eliminarImagenCheckbox.checked = false; 
-        eliminarImagenCheckbox.parentElement.style.display = 'none'; 
-        M.updateTextFields(); 
-        const modalInstance = M.Modal.getInstance(modalProducto);
-        modalInstance.open();
-      });
+            function renderizarTabla(productosAmostrar) {
+                tablaProductosBody.innerHTML = ''; 
 
-      btnEditarProductoFab.addEventListener('click', function() { // Cambiado a btnEditarProductoFab
-        if (selectedRow) {
-          isEditing = true;
-          modalTitle.textContent = 'Editar Producto';
-          formProducto.reset();
-          productoIdInput.readOnly = true; 
-          productoIdInput.name = 'id_producto_display'; 
-          
-          const id = selectedRow.dataset.id.trim(); 
-          productoIdHidden.value = id; 
-          productoIdHidden.name = 'id_producto'; 
-          eliminarImagenCheckbox.parentElement.style.display = 'block'; 
+                if (allProductos.length === 0) {
+                    tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">No hay productos registrados en este buque.</td></tr>`; 
+                    return;
+                }
 
-          axios.get(`/api/inventario/${matriculaBuque}/productos/${id}/`) 
-            .then(response => {
-              const producto = response.data;
-              productoIdInput.value = producto.id_producto ? String(producto.id_producto).trim() : ''; 
-              nombreProductoInput.value = producto.nombre_producto ? String(producto.nombre_producto).trim() : ''; 
-              descripcionInput.value = producto.descripcion ? String(producto.descripcion).trim() : ''; 
-              cantidadInput.value = producto.cantidad;
-              stockMinimoInput.value = producto.stock_minimo;
-              
-              M.FormSelect.getInstance(tipoProductoSelect).destroy();
-              tipoProductoSelect.value = producto.tipo ? String(producto.tipo).trim() : ''; 
-              M.FormSelect.init(tipoProductoSelect); 
+                if (productosAmostrar.length === 0) {
+                    tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">No hay productos que coincidan con la búsqueda o el filtro.</td></tr>`; 
+                    return;
+                }
 
-              if (producto.tipo.trim() === 'provision') { 
-                fechaCaducidadDiv.style.display = 'block';
-                fechaCaducidadInput.value = producto.fecha_caducidad;
-              } else {
+                productosAmostrar.forEach(producto => {
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-id', producto.id_producto); 
+                    row.innerHTML = `
+                        <td><i class="material-icons">${producto.tipo.trim() === 'provision' ? 'fastfood' : 'build'}</i></td>
+                        <td>${producto.id_producto}</td> 
+                        <td>${producto.nombre_producto}</td>
+                        <td>${producto.tipo.trim() === 'provision' ? 'Provisión' : 'Repuesto'}</td> 
+                        <td>${producto.cantidad}</td>
+                        <td>${producto.stock_minimo}</td>
+                    `;
+                    tablaProductosBody.appendChild(row);
+                });
+                resetSeleccion(); 
+            }
+
+            tablaProductosBody.addEventListener('click', function(e) {
+                let row = e.target.closest('tr');
+                if (!row || row.classList.contains('center-align')) { 
+                    resetSeleccion(); 
+                    return;
+                }
+
+                document.querySelectorAll('#tablaProductosBody tr').forEach(r => {
+                    r.classList.remove('selected');
+                });
+
+                selectedRow = row;
+                selectedRow.classList.add('selected');
+                
+                if (fabInstance) {
+                    fabInstance.open();
+                } 
+            });
+
+            document.addEventListener('click', function(e) {
+                const clickedInsideTable = e.target.closest('.tabla-productos');
+                const clickedInsideFAB = e.target.closest('.fixed-action-btn');
+
+                if (!clickedInsideTable && !clickedInsideFAB && selectedRow) {
+                    resetSeleccion();
+                }
+            });
+
+            function resetSeleccion() {
+                if (selectedRow) {
+                    selectedRow.classList.remove('selected');
+                }
+                selectedRow = null;
+                if (fabInstance) {
+                    fabInstance.close();
+                } 
+            }
+
+            btnAgregarProductoFab.addEventListener('click', function() { // Cambiado a btnAgregarProductoFab
+                isEditing = false;
+                modalTitle.textContent = 'Nuevo Producto';
+                formProducto.reset();
+                
+                // Destruir y reinicializar el select para que Materialize lo maneje correctamente
+                if (M.FormSelect.getInstance(tipoProductoSelect)) {
+                    M.FormSelect.getInstance(tipoProductoSelect).destroy();
+                }
+                tipoProductoSelect.value = ''; // Establece el valor por defecto si es necesario
+                M.FormSelect.init(tipoProductoSelect); 
+
+                productoIdInput.readOnly = false;
+                productoIdInput.name = 'id_producto'; 
+                productoIdHidden.name = ''; 
                 fechaCaducidadDiv.style.display = 'none';
-                fechaCaducidadInput.value = '';
-              }
+                imagenActualPreview.innerHTML = ''; 
+                eliminarImagenCheckbox.checked = false; 
+                eliminarImagenCheckbox.parentElement.style.display = 'none'; 
+                
+                // Asegúrate de actualizar los campos de texto después de resetear el formulario
+                M.updateTextFields(); 
+                
+                const modalInstance = M.Modal.getInstance(modalProducto);
+                modalInstance.open();
+            });
 
-              if (producto.imagen_url) { 
-                  imagenActualPreview.innerHTML = `<p>Imagen actual:</p><img src="${producto.imagen_url}" width="100" height="100" style="object-fit: cover;">`;
-              } else {
-                  imagenActualPreview.innerHTML = '';
-              }
-              fotoProductoInput.value = '';
-              eliminarImagenCheckbox.checked = false;
+            btnEditarProductoFab.addEventListener('click', function() { // Cambiado a btnEditarProductoFab
+                if (selectedRow) {
+                    isEditing = true;
+                    modalTitle.textContent = 'Editar Producto';
+                    formProducto.reset();
+                    productoIdInput.readOnly = true; 
+                    productoIdInput.name = 'id_producto_display'; 
+                    
+                    const id = selectedRow.dataset.id.trim(); 
+                    productoIdHidden.value = id; 
+                    productoIdHidden.name = 'id_producto'; 
+                    eliminarImagenCheckbox.parentElement.style.display = 'block'; 
 
-              M.updateTextFields();
-              const instance = M.Modal.getInstance(modalProducto);
-              instance.open();
-            })
-            .catch(error => {
-              console.error("Error al cargar producto para editar (Axios):", error.response || error);
-              try {
-                  const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar producto.';
-                  M.toast({html: 'Error al cargar producto: ' + errorMessage, classes: 'red darken-2'});
-              } catch (toastError) {
-                  alert('Error al cargar producto para editar. Consulta la consola para más detalles.');
+                    axios.get(`/api/inventario/${matriculaBuque}/productos/${id}/`) 
+                        .then(response => {
+                            const producto = response.data;
+                            productoIdInput.value = producto.id_producto ? String(producto.id_producto).trim() : ''; 
+                            nombreProductoInput.value = producto.nombre_producto ? String(producto.nombre_producto).trim() : ''; 
+                            descripcionInput.value = producto.descripcion ? String(producto.descripcion).trim() : ''; 
+                            cantidadInput.value = producto.cantidad;
+                            stockMinimoInput.value = producto.stock_minimo;
+                            
+                            // Destruir y reinicializar el select para que Materialize lo maneje correctamente
+                            if (M.FormSelect.getInstance(tipoProductoSelect)) {
+                                M.FormSelect.getInstance(tipoProductoSelect).destroy();
+                            }
+                            tipoProductoSelect.value = producto.tipo ? String(producto.tipo).trim() : ''; 
+                            M.FormSelect.init(tipoProductoSelect); 
+
+                            if (producto.tipo.trim() === 'provision') { 
+                                fechaCaducidadDiv.style.display = 'block';
+                                fechaCaducidadInput.value = producto.fecha_caducidad;
+                            } else {
+                                fechaCaducidadDiv.style.display = 'none';
+                                fechaCaducidadInput.value = '';
+                            }
+
+                            if (producto.imagen_url) { 
+                                imagenActualPreview.innerHTML = `<p>Imagen actual:</p><img src="${producto.imagen_url}" width="100" height="100" style="object-fit: cover;">`;
+                            } else {
+                                imagenActualPreview.innerHTML = '';
+                            }
+                            // Limpiar el input de archivo para evitar "fakepath" visualización
+                            fotoProductoInput.value = '';
+                            // Refrescar el componente de archivo de Materialize para que refleje el cambio si es necesario
+                            // Aunque Materialize no tiene un método directo para "refresh" file-field,
+                            // manipular el input value ya debería ser suficiente.
+
+                            eliminarImagenCheckbox.checked = false;
+
+                            // Actualizar los campos de texto después de cargar los datos
+                            M.updateTextFields();
+                            const instance = M.Modal.getInstance(modalProducto);
+                            instance.open();
+                        })
+                        .catch(error => {
+                            console.error("Error al cargar producto para editar (Axios):", error.response || error);
+                            try {
+                                const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar producto.';
+                                M.toast({html: 'Error al cargar producto: ' + errorMessage, classes: 'red darken-2'});
+                            } catch (toastError) {
+                                alert('Error al cargar producto para editar. Consulta la consola para más detalles.');
+                            }
+                        });
+                } else {
+                    M.toast({html: 'Selecciona un producto para editar', classes: 'orange darken-3'});
                 }
             });
-        } else {
-          M.toast({html: 'Selecciona un producto para editar', classes: 'orange darken-3'});
-        }
-      });
 
-      btnEliminarProductoFab.addEventListener('click', function() { // Cambiado a btnEliminarProductoFab
-        if (selectedRow) {
-          // Mostrar el modal de confirmación en lugar de confirm()
-          const id = selectedRow.dataset.id.trim();
-          const nombre = selectedRow.cells[2].textContent; // Asumiendo que el nombre está en la tercera celda (índice 2)
-          
-          productoToDeleteNameSpan.textContent = nombre;
-          productoToDeleteIdSpan.textContent = id;
-          confirmDeleteProductoModalInstance.open();
-        } else {
-          M.toast({html: 'Selecciona un producto para eliminar', classes: 'orange darken-3'});
-        }
-      });
+            btnEliminarProductoFab.addEventListener('click', function() { // Cambiado a btnEliminarProductoFab
+                if (selectedRow) {
+                    // Mostrar el modal de confirmación en lugar de confirm()
+                    const id = selectedRow.dataset.id.trim();
+                    const nombre = selectedRow.cells[2].textContent; // Asumiendo que el nombre está en la tercera celda (índice 2)
+                    
+                    productoToDeleteNameSpan.textContent = nombre;
+                    productoToDeleteIdSpan.textContent = id;
+                    confirmDeleteProductoModalInstance.open();
+                } else {
+                    M.toast({html: 'Selecciona un producto para eliminar', classes: 'orange darken-3'});
+                }
+            });
 
-      // Lógica de eliminación cuando se confirma en el modal de confirmación
-      confirmDeleteProductoBtn.addEventListener('click', function() {
-          if (selectedRow) {
-              const id = selectedRow.dataset.id.trim();
-              const formData = new FormData();
-              formData.append('_method', 'DELETE');
+            // Lógica de eliminación cuando se confirma en el modal de confirmación
+            confirmDeleteProductoBtn.addEventListener('click', function() {
+                if (selectedRow) {
+                    const id = selectedRow.dataset.id.trim();
+                    const formData = new FormData();
+                    formData.append('_method', 'DELETE');
 
-              axios.post(`/api/inventario/${matriculaBuque}/productos/${id}/`, formData) 
-                  .then(response => {
-                      M.toast({html: response.data?.message || 'Producto eliminado exitosamente', classes: 'green darken-2'});
-                      confirmDeleteProductoModalInstance.close(); // Cerrar el modal de confirmación
-                      cargarProductos(); 
-                      resetSeleccion();
-                  })
-                  .catch(error => {
-                      console.error("Delete failed error (Axios POST):", error.response || error); 
-                      try {
-                          const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al eliminar producto.';
-                          M.toast({html: 'Error al eliminar producto: ' + errorMessage, classes: 'red darken-2'});
-                      } catch (toastError) {
-                          alert('Error al eliminar producto. Consulta la consola para más detalles.');
-                      }
-                      confirmDeleteProductoModalInstance.close(); // Cerrar el modal de confirmación incluso si hay error
-                  });
-          }
-      });
+                    axios.post(`/api/inventario/${matriculaBuque}/productos/${id}/`, formData) 
+                        .then(response => {
+                            M.toast({html: response.data?.message || 'Producto eliminado exitosamente', classes: 'green darken-2'});
+                            confirmDeleteProductoModalInstance.close(); // Cerrar el modal de confirmación
+                            cargarProductos(); 
+                            resetSeleccion();
+                        })
+                        .catch(error => {
+                            console.error("Delete failed error (Axios POST):", error.response || error); 
+                            try {
+                                const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al eliminar producto.';
+                                M.toast({html: 'Error al eliminar producto: ' + errorMessage, classes: 'red darken-2'});
+                            } catch (toastError) {
+                                alert('Error al eliminar producto. Consulta la consola para más detalles.');
+                            }
+                            confirmDeleteProductoModalInstance.close(); // Cerrar el modal de confirmación incluso si hay error
+                        });
+                }
+            });
 
-      formProducto.addEventListener('submit', function(e) {
-        e.preventDefault();
+            formProducto.addEventListener('submit', function(e) {
+                e.preventDefault();
 
-        const formData = new FormData(formProducto);
-        formData.set('tipo', tipoProductoSelect.value); 
+                const formData = new FormData(formProducto);
+                formData.set('tipo', tipoProductoSelect.value); 
 
-        if (tipoProductoSelect.value === 'provision' && fechaCaducidadInput.value) {
-            formData.set('fecha_caducidad', fechaCaducidadInput.value);
-        } else if (tipoProductoSelect.value !== 'provision') {
-            formData.delete('fecha_caducidad'); 
-        }
-        
-        const fileInput = document.getElementById('fotoProducto');
-        if (fileInput.files.length > 0) {
-            formData.append('foto_producto', fileInput.files[0]);
-        } else if (isEditing && eliminarImagenCheckbox.checked) {
-            formData.append('foto_producto', ''); 
-        } else if (isEditing && !fileInput.files.length > 0 && !eliminarImagenCheckbox.checked) {
-            formData.delete('foto_producto'); 
-        }
+                if (tipoProductoSelect.value === 'provision' && fechaCaducidadInput.value) {
+                    formData.set('fecha_caducidad', fechaCaducidadInput.value);
+                } else if (tipoProductoSelect.value !== 'provision') {
+                    formData.delete('fecha_caducidad'); 
+                }
+                
+                const fileInput = document.getElementById('fotoProducto');
+                // Al agregar o editar, si hay un archivo seleccionado, agregarlo al formData.
+                // Si estamos editando y el checkbox de eliminar imagen está marcado, enviamos 'delete_image': 'true'
+                // para que el backend sepa que debe borrar la imagen.
+                if (fileInput.files.length > 0) {
+                    formData.append('foto_producto', fileInput.files[0]);
+                } else if (isEditing && eliminarImagenCheckbox.checked) {
+                    // Si el checkbox está marcado, enviamos una señal al backend para eliminar la imagen.
+                    // No necesitas adjuntar 'foto_producto': '' en este caso, el backend debería
+                    // tener una lógica para manejar 'eliminarImagenCheckbox'
+                    formData.append('eliminar_foto_producto', 'true'); 
+                    formData.delete('foto_producto'); // Asegúrate de no enviar un archivo vacío si se va a eliminar
+                } else if (isEditing && !fileInput.files.length > 0 && !eliminarImagenCheckbox.checked) {
+                    // Si estamos editando, no se selecciona una nueva imagen y no se marca "eliminar",
+                    // entonces no enviamos el campo 'foto_producto' en absoluto para que el backend
+                    // no intente modificar la imagen existente.
+                    formData.delete('foto_producto'); 
+                }
 
-        if (isEditing) {
-            const id = productoIdHidden.value.trim(); 
-            formData.append('_method', 'PUT');
 
-            axios.post(`/api/inventario/${matriculaBuque}/productos/${id}/`, formData) 
-            .then(response => {
-                const message = response.data?.message || 'Producto actualizado exitosamente';
-                M.toast({html: message, classes: 'green darken-2'});
-                modalProductoInstance.close();
-                cargarProductos(); 
-            })
-            .catch(error => {
-                console.error("Update failed error (Axios POST):", error.response || error); 
-                const errors = error.response?.data?.errors;
-                try {
-                    if (errors) {
-                        let errorMessages = Object.values(errors).flat().join('<br>');
-                        M.toast({html: errorMessages, classes: 'red darken-2'});
-                    } else {
-                        const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al actualizar producto.';
-                        M.toast({html: 'Error al actualizar producto: ' + errorMessage, classes: 'red darken-2'});
+                if (isEditing) {
+                    const id = productoIdHidden.value.trim(); 
+                    formData.append('_method', 'PUT');
+
+                    axios.post(`/api/inventario/${matriculaBuque}/productos/${id}/`, formData) 
+                    .then(response => {
+                        const message = response.data?.message || 'Producto actualizado exitosamente';
+                        M.toast({html: message, classes: 'green darken-2'});
+                        modalProductoInstance.close();
+                        cargarProductos(); 
+                    })
+                    .catch(error => {
+                        console.error("Update failed error (Axios POST):", error.response || error); 
+                        const errors = error.response?.data?.errors;
+                        try {
+                            if (errors) {
+                                let errorMessages = Object.values(errors).flat().join('<br>');
+                                M.toast({html: errorMessages, classes: 'red darken-2'});
+                            } else {
+                                const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al actualizar producto.';
+                                M.toast({html: 'Error al actualizar producto: ' + errorMessage, classes: 'red darken-2'});
+                            }
+                        } catch (toastError) {
+                            alert('Error al actualizar producto. Consulta la consola para más detalles.');
+                        }
+                    });
+                } else {
+                    const id_to_create = productoIdInput.value.trim(); 
+                    formData.set('id_producto', id_to_create); 
+
+                    axios.post(`/api/inventario/${matriculaBuque}/productos/`, formData) 
+                    .then(response => {
+                        const message = response.data?.message || 'Producto creado exitosamente';
+                        M.toast({html: message, classes: 'green darken-2'});
+                        modalProductoInstance.close();
+                        cargarProductos(); 
+                    })
+                    .catch(error => {
+                        console.error("Create failed error (Axios POST):", error.response || error); 
+                        const errors = error.response?.data?.errors;
+                        try {
+                            if (errors) {
+                                let errorMessages = Object.values(errors).flat().join('<br>');
+                                M.toast({html: errorMessages, classes: 'red darken-2'});
+                            } else {
+                                const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al crear producto.';
+                                M.toast({html: 'Error al crear producto: ' + errorMessage, classes: 'red darken-2'});
+                            }
+                        } catch (toastError) {
+                            alert('Error al crear producto. Consulta la consola para más detalles.');
+                        }
+                    });
+                }
+            });
+
+            searchInput.addEventListener('input', aplicarFiltrosYRenderizar);
+            filtroCategoriaSelect.addEventListener('change', aplicarFiltrosYRenderizar);
+
+            btnAlertas.addEventListener('click', function() {
+                const productosBajos = allProductos.filter(p => p.cantidad < p.stock_minimo); 
+                const productosCaducados = allProductos.filter(p => {
+                    if (p.tipo.trim() === 'provision' && p.fecha_caducidad) { 
+                        const hoy = new Date();
+                        const caducidad = new Date(p.fecha_caducidad);
+                        return caducidad < hoy;
                     }
-                } catch (toastError) {
-                    alert('Error al actualizar producto. Consulta la consola para más detalles.');
+                    return false;
+                });
+
+                let mensaje = '';
+                if (productosBajos.length > 0) {
+                    mensaje += `Productos bajo stock mínimo (${productosBajos.length}):\n`;
+                    mensaje += productosBajos.map(p => `- ${p.nombre_producto} (${p.cantidad}/${p.stock_minimo})`).join('\n'); 
+                }
+                
+                if (productosCaducados.length > 0) {
+                    if (mensaje) mensaje += '\n\n';
+                    mensaje += `Productos caducados (${productosCaducados.length}):\n`;
+                    mensajeCaducados = productosCaducados.map(p => `- ${p.nombre_producto} (${p.fecha_caducidad})`).join('\n'); 
+                    mensaje += mensajeCaducados;
+                }
+
+                if (mensaje) {
+                    M.toast({html: `<pre>${mensaje}</pre>`, classes: 'yellow darken-2', displayLength: 6000}); 
+                } else {
+                    M.toast({html: 'No hay alertas de productos.', classes: 'green'});
                 }
             });
-        } else {
-            const id_to_create = productoIdInput.value.trim(); 
-            formData.set('id_producto', id_to_create); 
 
-            axios.post(`/api/inventario/${matriculaBuque}/productos/`, formData) 
-            .then(response => {
-                const message = response.data?.message || 'Producto creado exitosamente';
-                M.toast({html: message, classes: 'green darken-2'});
-                modalProductoInstance.close();
-                cargarProductos(); 
-            })
-            .catch(error => {
-                console.error("Create failed error (Axios POST):", error.response || error); 
-                const errors = error.response?.data?.errors;
-                try {
-                    if (errors) {
-                        let errorMessages = Object.values(errors).flat().join('<br>');
-                        M.toast({html: errorMessages, classes: 'red darken-2'});
-                    } else {
-                        const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al crear producto.';
-                        M.toast({html: 'Error al crear producto: ' + errorMessage, classes: 'red darken-2'});
-                    }
-                } catch (toastError) {
-                    alert('Error al crear producto. Consulta la consola para más detalles.');
-                }
-            });
-        }
-      });
+      
 
-      searchInput.addEventListener('input', aplicarFiltrosYRenderizar);
-      filtroCategoriaSelect.addEventListener('change', aplicarFiltrosYRenderizar);
-
-      btnAlertas.addEventListener('click', function() {
-        const productosBajos = allProductos.filter(p => p.cantidad < p.stock_minimo); 
-        const productosCaducados = allProductos.filter(p => {
-          if (p.tipo.trim() === 'provision' && p.fecha_caducidad) { 
-            const hoy = new Date();
-            const caducidad = new Date(p.fecha_caducidad);
-            return caducidad < hoy;
-          }
-          return false;
         });
-
-        let mensaje = '';
-        if (productosBajos.length > 0) {
-          mensaje += `Productos bajo stock mínimo (${productosBajos.length}):\n`;
-          mensaje += productosBajos.map(p => `- ${p.nombre_producto} (${p.cantidad}/${p.stock_minimo})`).join('\n'); 
-        }
-        
-        if (productosCaducados.length > 0) {
-          if (mensaje) mensaje += '\n\n';
-          mensaje += `Productos caducados (${productosCaducados.length}):\n`;
-          mensajeCaducados = productosCaducados.map(p => `- ${p.nombre_producto} (${p.fecha_caducidad})`).join('\n'); 
-          mensaje += mensajeCaducados;
-        }
-
-        if (mensaje) {
-          M.toast({html: `<pre>${mensaje}</pre>`, classes: 'yellow darken-2', displayLength: 6000}); 
-        } else {
-          M.toast({html: 'No hay alertas de productos.', classes: 'green'});
-        }
-      });
-    });
-  </script>
+    </script>
 </body>
 </html>

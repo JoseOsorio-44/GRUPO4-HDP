@@ -1,10 +1,10 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso Denegado - OceanTrack</title>
-    {% load static %}
     <link rel="stylesheet" href="{% static 'css/materialize.min.css' %}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
@@ -12,18 +12,23 @@
             display: flex;
             min-height: 100vh;
             flex-direction: column;
-            background-color: #f5f5f5;
+            /* ADAPTACIÓN: Fondo degradado para un aspecto más estético */
+            background: linear-gradient(to bottom, #bbdefb, #42a5f5); /* Light Blue 100 to Blue 400 */
         }
         main {
             flex: 1 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 20px 0; /* Añadir padding vertical para espacio */
         }
         .error-card {
             max-width: 500px;
             padding: 30px;
             text-align: center;
+            /* ADAPTACIÓN: Sombra más pronunciada para la tarjeta */
+            box-shadow: 0 8px 17px 2px rgba(0,0,0,0.14), 0 3px 14px 2px rgba(0,0,0,0.12), 0 5px 5px -3px rgba(0,0,0,0.2);
+            border-radius: 8px; /* Ligeramente más redondeado */
         }
         .error-icon {
             font-size: 80px;
@@ -33,10 +38,22 @@
         .btn-large {
             margin-top: 30px;
         }
+        /* Estilo para el logo en la navbar */
+        .brand-logo img {
+            height: 55px;
+            margin-left: 14px;
+            margin-top: 6px;
+            vertical-align: middle;
+        }
+        .brand-logo span {
+            margin-left: 10px;
+            font-size: 2.5rem;
+            position: relative;
+            top: -14px;
+        }
     </style>
 </head>
-<body>
-    
+<body> 
     <main>
         <div class="container">
             <div class="row">
@@ -46,12 +63,13 @@
                         <span class="card-title black-text">Acceso Denegado</span>
                         <p class="black-text flow-text">{{ message }}</p>
                         <p class="grey-text">Usuario actual: {{ username }}</p>
-                        <a href="{% url 'home' %}" class="waves-effect waves-light btn-large blue darken-1">
-                            <i class="material-icons left">arrow_back</i> Volver al inicio
+                        <!-- ADAPTACIÓN: Botón para volver a la página anterior -->
+                        <a href="javascript:void(0);" onclick="history.back();" class="waves-effect waves-light btn-large blue darken-1">
+                            <i class="material-icons left">arrow_back</i> Volver
                         </a>
                         {% if request.session.user_role %}
                             <p style="margin-top: 20px;">
-                                <a href="{% url 'logout' %}"   class="waves-effect waves-light btn red lighten-1">Cerrar Sesión</a>
+                                <a href="{% url 'logout' %}" class="waves-effect waves-light btn red lighten-1">Cerrar Sesión</a>
                             </p>
                         {% endif %}
                     </div>
