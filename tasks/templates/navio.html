@@ -15,16 +15,53 @@
         .tabla-navios tr.selected {
             background-color: #e3f2fd !important; /* Materialize Light Blue accent-1 */
         }
-        /* Los botones se mostrarán/ocultarán con JS */
-        #btnEditarNavio, #btnInventario {
-            display: none; 
-        }
-        /* Estilos de Toast si los tienes definidos */
+        
+        /* Estilos de Toast */
         .toast.red {
             background-color: #ef5350 !important;
         }
         .toast.green {
             background-color: #66bb6a !important;
+        }
+
+        /* Estilos para centrar la barra de búsqueda y el botón de agregar */
+        .header-controls-row {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center; /* Centra los elementos horizontalmente */
+            align-items: flex-end; /* Alinea los elementos a la parte inferior */
+            gap: 15px; /* Espacio entre columnas */
+        }
+        .header-controls-row .input-field {
+            margin-bottom: 0; /* Elimina el margen inferior extra de los campos de entrada */
+        }
+        .header-controls-row .btn {
+            margin-bottom: 0; /* Alinea los botones con los campos de entrada */
+        }
+
+        /* Estilos para los botones flotantes independientes con animación */
+        #fabInventario, #fabEditar, #fabEliminarNavio { 
+            position: fixed;
+            z-index: 998; 
+            opacity: 0; /* Inicialmente transparentes */
+            transform: translateY(20px); /* Inicialmente ligeramente abajo */
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* Transición para ambos */
+            display: none; /* Oculto por defecto */
+        }
+
+        #fabEliminarNavio { 
+            bottom: 147px; /* Posición más arriba que el de inventario */
+            right: 24px;
+        }
+
+        #fabInventario {
+            bottom: 85px; /* Posición más arriba que el de editar */
+            right: 24px;
+        }
+
+        #fabEditar {
+            bottom: 23px; /* Posición más abajo */
+            right: 24px;
         }
     </style>
 </head>
@@ -32,23 +69,25 @@
 <body>
     <script src="{% static 'js/materialize.min.js' %}"></script>
 
-    <nav class="blue darken-1">
-        <div class="nav-wrapper">
-            <a href="{% url 'admin_view' %}" class="brand-logo">
-              <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-left:14px; margin-top:6px;">
-            <span style="margin-left: 10px; font-size: 2.5rem; position: relative; top: -14px;">OceanTrack</span>
-            </a>
-            <a href="#!" class="brand-logo center">Navios</a>
-            <ul class="right hide-on-med-and-down">
-                <li><a href="{% url 'admin_view' %}"><i class="material-icons left">people</i>Gerentes</a></li>
-                <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
-            </ul>
-        </div>
-    </nav>
+
+<nav class="blue darken-1">
+    <div class="nav-wrapper">
+        <a href="{% url 'admin_view' %}" class="brand-logo">
+            <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-right: 10px; vertical-align: middle;">
+            <span>OceanTrack</span>
+        </a>
+        <a href="#!" class="brand-logo center">Buques</a>
+        <ul class="right hide-on-med-and-down">
+            <li><a href="{% url 'admin_view' %}"><i class="material-icons left">people</i>Gerentes</a></li>
+            <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
+        </ul>
+    </div>
+</nav>
 
     <div class="container">
-        <div class="row" style="margin-top: 20px;">
-            <div class="col s12 m6">
+        <!-- Fila para la barra de búsqueda y el botón de agregar -->
+        <div class="row header-controls-row">
+            <div class="col s12 m6"> <!-- Barra de búsqueda -->
                 <div class="input-field">
                     <i class="material-icons prefix">search</i>
                     <input id="search" type="text" placeholder="Buscar navío">
@@ -56,21 +95,16 @@
                 </div>
             </div>
 
-            <div class="col s12 m6">
-                <div class="right-align">
-                    <a id="btnEditarNavio" class="waves-effect waves-light btn blue">
-                        <i class="material-icons left">search</i>Ver información
-                    </a>
-                    <a id="btnAgregarNavio" class="waves-effect waves-light btn teal">
-                        <i class="material-icons left">add</i>Agregar Navío
-                    </a>
-                </div>
+            <div class="col s12 m3"> <!-- Botón Agregar Navío -->
+                <a id="btnAgregarNavio" class="waves-effect waves-light btn teal" style="width: 100%;">
+                    <i class="material-icons left">add</i>Agregar Navío
+                </a>
             </div>
         </div>
 
         <div class="row tabla-navios">
             <div class="col s12">
-                <table class="highlight">
+                <table class="striped highlight"> 
                     <thead>
                         <tr>
                             <th></th>
@@ -87,11 +121,33 @@
         </div>
     </div>
 
+    <!-- Botón flotante para Eliminar Navío (aparece al seleccionar) -->
+    <div class="fixed-action-btn" id="fabEliminarNavio">
+      <a class="btn-floating btn-large red">
+        <i class="large material-icons">delete</i>
+      </a>
+    </div>
+
+    <!-- Botón flotante para Ir a Inventario (aparece al seleccionar) -->
+    <div class="fixed-action-btn" id="fabInventario">
+      <a class="btn-floating btn-large light-blue">
+        <i class="large material-icons">inventory</i>
+      </a>
+    </div>
+
+    <!-- Botón flotante para Editar Navío (aparece al seleccionar) -->
+    <div class="fixed-action-btn" id="fabEditar">
+      <a class="btn-floating btn-large blue modal-trigger" href="#modalNavio">
+        <i class="large material-icons">edit</i>
+      </a>
+    </div>
+
+
     <div id="modalNavio" class="modal">
         <div class="modal-content">
             <h5 id="modalTitulo"></h5> 
             <form id="formNavio" action="" method="post">
-                {% csrf_token %} {# Este input hidden es para los formularios tradicionales, pero también nos ayuda a obtener el token para Axios #}
+                {% csrf_token %} 
                 <input type="hidden" id="navioMatricula"> 
                 
                 <div class="input-field">
@@ -119,11 +175,9 @@
         </div>
 
         <div class="modal-footer">
-            <a id="btnEliminarNavio" class="waves-effect waves-light btn red left" style="display: none;">
+            <!-- Botón de eliminar dentro del modal -->
+            <a id="btnEliminarNavioModal" class="waves-effect waves-light btn red left" style="display: none;">
                 <i class="material-icons left">delete</i>Eliminar
-            </a>
-            <a id="btnInventario" class="waves-effect waves-light btn light-blue" style="display: none;">
-                <i class="material-icons left">inventory</i>Ir a Inventario
             </a>
             <button type="submit" form="formNavio" class="waves-effect waves-light btn">
                 <span id="btnAccion"></span> 
@@ -132,12 +186,26 @@
         </div>
     </div>
 
+    <!-- ADAPTACIÓN: Nuevo Modal de Confirmación de Eliminación -->
+    <div id="confirmDeleteModal" class="modal">
+        <div class="modal-content">
+            <h4>Confirmar Eliminación</h4>
+            <p>¿Estás seguro de que quieres eliminar el navío "<strong id="navioToDeleteName"></strong>" con matrícula "<strong id="navioToDeleteMatricula"></strong>"? Esta acción es irreversible.</p>
+        </div>
+        <div class="modal-footer">
+            <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+            <a href="#!" id="confirmDeleteBtn" class="waves-effect waves-red btn red">Eliminar</a>
+        </div>
+    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- INICIALIZACIÓN DE MATERIALIZE (Asegúrate de que esto esté presente y correcto) ---
+        // --- INICIALIZACIÓN DE MATERIALIZE ---
         const elemsModal = document.querySelectorAll('.modal');
         M.Modal.init(elemsModal); 
         const modalNavioInstance = M.Modal.getInstance(document.getElementById('modalNavio'));
+        // ADAPTACIÓN: Inicializar el nuevo modal de confirmación
+        const confirmDeleteModalInstance = M.Modal.getInstance(document.getElementById('confirmDeleteModal'));
         
         // --- Configuración de Axios para CSRF ---
         function getCookie(name) {
@@ -146,7 +214,6 @@
                 const cookies = document.cookie.split(';');
                 for (let i = 0; i < cookies.length; i++) {
                     const cookie = cookies[i].trim();
-                    // Does this cookie string begin with the name we want?
                     if (cookie.substring(0, name.length + 1) === (name + '=')) {
                         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                         break;
@@ -174,16 +241,32 @@
         // Elementos del DOM
         const tablaNavios = document.getElementById('tablaNavios');
         const formNavio = document.getElementById('formNavio');
-        const btnEditar = document.getElementById('btnEditarNavio');
-        const btnInventario = document.getElementById('btnInventario');
+        const btnAgregarNavio = document.getElementById('btnAgregarNavio'); // Botón en el encabezado
+
+        // Referencias a los FABs individuales
+        const fabEliminarNavioDiv = document.getElementById('fabEliminarNavio'); 
+        const fabInventarioDiv = document.getElementById('fabInventario');
+        const fabEditarDiv = document.getElementById('fabEditar');
+
+        const btnEliminarNavio = fabEliminarNavioDiv.querySelector('a'); 
+        const btnInventario = fabInventarioDiv.querySelector('a'); 
+        const btnEditar = fabEditarDiv.querySelector('a');     
+
+        // Referencia al botón de eliminar dentro del modal
+        const btnEliminarNavioModal = document.getElementById('btnEliminarNavioModal');
+
+        // ADAPTACIÓN: Referencias a elementos del modal de confirmación
+        const navioToDeleteNameSpan = document.getElementById('navioToDeleteName');
+        const navioToDeleteMatriculaSpan = document.getElementById('navioToDeleteMatricula');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+
         const modalTitulo = document.getElementById('modalTitulo');
         const btnAccion = document.getElementById('btnAccion');
-        const navioMatriculaInput = document.getElementById('navioMatricula'); 
+        const navioMatriculaInput = document.getElementById('matriculaBuque'); // Cambiado de navioMatriculaInput a matriculaBuqueInput para ser consistente
         const selectGerente = document.getElementById('gerenteNavio');
-        const btnEliminar = document.getElementById('btnEliminarNavio');
         const searchInput = document.getElementById('search');
-        const btnAgregarNavio = document.getElementById('btnAgregarNavio'); 
-        const matriculaBuqueInput = document.getElementById('matriculaBuque');
+        // const matriculaBuqueInput = document.getElementById('matriculaBuque'); // Ya se usa matriculaBuqueInput arriba
 
         // Cargar datos iniciales: navíos y gerentes
         cargarDatosIniciales();
@@ -205,21 +288,32 @@
             navioSeleccionado = navios.find(n => String(n.matricula_buque) === fila.dataset.matricula); 
 
             if (navioSeleccionado) {
-                btnEditar.style.display = 'inline-block';
-                btnInventario.style.display = 'inline-block';
-                btnEliminar.style.display = 'inline-block'; 
+                // Mostrar los FABs individuales con animación
+                fabEliminarNavioDiv.style.display = 'block'; 
+                fabInventarioDiv.style.display = 'block';
+                fabEditarDiv.style.display = 'block';
+                // Forzar un reflow para que la transición se aplique correctamente
+                fabEliminarNavioDiv.offsetWidth; 
+                fabInventarioDiv.offsetWidth; 
+                fabEditarDiv.offsetWidth; 
+                fabEliminarNavioDiv.style.opacity = '1'; 
+                fabEliminarNavioDiv.style.transform = 'translateY(0)'; 
+                fabInventarioDiv.style.opacity = '1';
+                fabInventarioDiv.style.transform = 'translateY(0)';
+                fabEditarDiv.style.opacity = '1';
+                fabEditarDiv.style.transform = 'translateY(0)';
             } else {
-                btnEditar.style.display = 'none';
-                btnInventario.style.display = 'none';
-                btnEliminar.style.display = 'none';
+                // Esto se maneja en resetSeleccion()
             }
         });
 
+        // Event listener para el botón "Agregar Navío" en el encabezado
         btnAgregarNavio.addEventListener('click', function() {
             prepararModalParaAgregar();
             modalNavioInstance.open(); 
         });
 
+        // Event listener para el botón "Editar" (flotante independiente)
         btnEditar.addEventListener('click', function() {
             if (!navioSeleccionado) {
                 M.toast({html: 'Por favor, seleccione un navío para ver su información.', classes: 'orange'});
@@ -229,33 +323,56 @@
             modalNavioInstance.open(); 
         });
 
+        // Event listener para el botón "Ir a Inventario" (flotante independiente)
         btnInventario.addEventListener('click', function() {
             if (!navioSeleccionado) {
                 M.toast({html: 'Por favor, seleccione un navío para ver su inventario.', classes: 'orange'});
                 return;
             }
-            window.location.href = `inventario/${navioSeleccionado.matricula_buque}/`; 
+            window.location.href = `/inventario/${navioSeleccionado.matricula_buque}/`;
         });
 
-        btnEliminar.addEventListener('click', function() {
+        // ADAPTACIÓN: Event listener para el botón "Eliminar" (flotante independiente)
+        btnEliminarNavio.addEventListener('click', function() {
             if (!navioSeleccionado) {
                 M.toast({html: 'Por favor, seleccione un navío para eliminar.', classes: 'orange'});
                 return;
             }
+            // ADAPTACIÓN: Mostrar el modal de confirmación en lugar de confirm()
+            navioToDeleteNameSpan.textContent = navioSeleccionado.nombre_buque;
+            navioToDeleteMatriculaSpan.textContent = navioSeleccionado.matricula_buque;
+            confirmDeleteModalInstance.open();
+        });
 
-            if (confirm(`¿Estás seguro de eliminar el navío "${navioSeleccionado.nombre_buque}"? Esta acción es irreversible.`)) {
-                axios.delete(`/api/navios/${navioSeleccionado.matricula_buque}/`) 
+        // ADAPTACIÓN: Event listener para el botón "Eliminar" dentro del modal
+        btnEliminarNavioModal.addEventListener('click', function() {
+            // Reutiliza la lógica del FAB de eliminar
+            btnEliminarNavio.click();
+        });
+
+        // ADAPTACIÓN: Lógica de eliminación cuando se confirma en el modal de confirmación
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (navioSeleccionado) {
+                const id = navioSeleccionado.matricula_buque;
+                axios.delete(`/api/navios/${id}/`) 
                     .then(() => {
                         M.toast({html: 'Navío eliminado correctamente', classes: 'green'});
-                        modalNavioInstance.close(); 
+                        // Cerrar ambos modales si están abiertos
+                        if (modalNavioInstance.isOpen) {
+                            modalNavioInstance.close();
+                        }
+                        confirmDeleteModalInstance.close();
                         cargarDatosIniciales(); 
                     })
                     .catch(error => {
+                        console.error("Delete failed error (Axios):", error.response || error); 
                         const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Hubo un problema al eliminar el navío.';
                         M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
+                        confirmDeleteModalInstance.close(); // Cerrar el modal de confirmación incluso si hay error
                     });
             }
         });
+
 
         formNavio.addEventListener('submit', function(event) {
             event.preventDefault(); 
@@ -285,7 +402,7 @@
                         M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
                     });
             } else { 
-                // Lógica de creación (POST) - AQUI ES DONDE AÑADIMOS LA VALIDACIÓN OBLIGATORIA
+                // Lógica de creación (POST)
                 if (!datos.carnet_gerente || datos.carnet_gerente === "") { 
                     M.toast({html: 'Debe seleccionar un gerente para crear un navío.', classes: 'red'});
                     return; 
@@ -305,16 +422,13 @@
         });
 
 
-        // --- Funciones auxiliares (sin cambios en la lógica, solo para contexto) ---
-
         function prepararModalParaAgregar() {
             formNavio.reset(); 
             navioMatriculaInput.value = ''; 
             matriculaBuqueInput.readOnly = false; 
             modalTitulo.textContent = 'Agregar navío'; 
             btnAccion.textContent = 'Registrar'; 
-            btnEliminar.style.display = 'none'; 
-            btnInventario.style.display = 'none'; 
+            btnEliminarNavioModal.style.display = 'none'; // Ocultar el botón de eliminar del modal
 
             M.FormSelect.getInstance(selectGerente)?.destroy(); 
             selectGerente.value = "";
@@ -331,8 +445,7 @@
         async function prepararModalParaEditar(navio) {
             modalTitulo.textContent = 'Informacion del navio'; 
             btnAccion.textContent = 'Actualizar'; 
-            btnEliminar.style.display = 'inline-block'; 
-            btnInventario.style.display = 'inline-block'; 
+            btnEliminarNavioModal.style.display = 'inline-block'; // Mostrar el botón de eliminar del modal
 
             navioMatriculaInput.value = navio.matricula_buque.trim(); 
             document.getElementById('nombreNavio').value = navio.nombre_buque.trim();
@@ -364,9 +477,20 @@
             document.querySelectorAll('#tablaNavios tr').forEach(row => {
                 row.classList.remove('selected');
             });
-            btnEditar.style.display = 'none';
-            btnInventario.style.display = 'none';
-            btnEliminar.style.display = 'none'; 
+            // Ocultar los FABs individuales con animación
+            fabEliminarNavioDiv.style.opacity = '0'; 
+            fabEliminarNavioDiv.style.transform = 'translateY(20px)'; 
+            fabInventarioDiv.style.opacity = '0';
+            fabInventarioDiv.style.transform = 'translateY(20px)';
+            fabEditarDiv.style.opacity = '0';
+            fabEditarDiv.style.transform = 'translateY(20px)';
+
+            // Establecer display a 'none' después de que la transición termine
+            setTimeout(() => {
+                fabEliminarNavioDiv.style.display = 'none'; 
+                fabInventarioDiv.style.display = 'none';
+                fabEditarDiv.style.display = 'none';
+            }, 300); // Coincide con la duración de la transición CSS
         }
 
         async function cargarDatosIniciales() {
@@ -401,12 +525,11 @@
         async function cargarSelectGerentes(gerenteActualCarnet = null) {
             M.FormSelect.getInstance(selectGerente)?.destroy(); 
 
-            // Creamos una opción "vacía" que NO PUEDE SER SELECCIONADA si es obligatorio
             const defaultOption = document.createElement('option');
             defaultOption.value = ""; 
-            defaultOption.disabled = true; // Hacerla deshabilitada
-            defaultOption.selected = true; // Seleccionada por defecto
-            defaultOption.textContent = "Seleccione un gerente"; // Texto para el usuario
+            defaultOption.disabled = true; 
+            defaultOption.selected = true; 
+            defaultOption.textContent = "Seleccione un gerente"; 
             
             selectGerente.innerHTML = ''; 
             selectGerente.appendChild(defaultOption);

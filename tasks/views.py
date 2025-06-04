@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from tasks.models import Administrador, Gerente, Buque
+from tasks.models import Administrador, Gerente, Buque, Producto
 from django.contrib import messages
 from django.urls import reverse
 from .decorator import role_required
@@ -8,6 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 import traceback
+import os
+from datetime import datetime
 
 
 def home(request):
@@ -374,10 +376,251 @@ def gerente_list(request):
         return JsonResponse({'error': f'Error interno del servidor en gerente_list: {str(e)}'}, status=500)
 
 
-#vista del catalogo
-def inventario_view(request, matricula_buque):
+
+
+@role_required(allowed_roles=['admin', 'gerente'])
+@require_http_methods(["GET", "POST"])
+@csrf_exempt
+def producto_list_create(request):
+    if request.method == 'GET':
+        gerentes_data = []
+        for gerente in Gerente.objects.all():
+            gerentes_data.append({
+                'carnet_gerente': gerente.carnet_gerente,
+                'nombre': gerente.nombre_gerente,
+                'contrasenia': gerente.password_gerente,
+                'email': gerente.email,
+            })
+        return JsonResponse(gerentes_data, safe=False)
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            carnet = data.get('carnet_gerente')
+            nombre = data.get('nombre')
+            password = data.get('password')
+            email = data.get('email')
+
+            if not all([carnet, nombre, password, email]):
+                return JsonResponse({'error': 'Faltan campos obligatorios'}, status=400)
+
+            if Gerente.objects.filter(carnet_gerente=carnet).exists():
+                return JsonResponse({'error': 'El carnet de gerente ya existe'}, status=409)
+
+            nuevo_gerente = Gerente.objects.create(
+                carnet_gerente=carnet,
+                nombre_gerente=nombre,
+                password_gerente=password,
+                email=email,
+            )
+            return JsonResponse({'message': 'Gerente creado exitosamente', 'carnet_gerente': nuevo_gerente.carnet_gerente}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Request body must be valid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+
+
+
+def catalogo_view(request, matricula_buque):
     buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
-    context = {
-        'buque': buque,
-    }
-    return render(request, 'catalogo.html', context)
+    productos = Producto.objects.filter(matricula_buque=buque)
+    return render(request, 'catalogo.html', {'buque': buque, 'productos': productos})
+
+
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_productos_list_create(request, matricula_buque):
+    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
+
+    if request.method == 'GET':
+        productos = Producto.objects.filter(matricula_buque=buque).order_by('nombre_producto')
+        data = []
+        for producto in productos:
+            data.append({
+                'id_producto': producto.id_producto.strip() if producto.id_producto else None, # Asegurar que el ID se limpia al enviar
+                'nombre_producto': producto.nombre_producto,
+                'descripcion': producto.descripcion,
+                'cantidad': producto.cantidad,
+                'stock_minimo': producto.stock_minimo,
+                'tipo': producto.tipo,
+                'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
+                'imagen_url': producto.foto_producto.url if producto.foto_producto else None,
+            })
+        return JsonResponse(data, safe=False)
+
+    elif request.method == 'POST':
+        try:
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+            else: # Asumimos FormData
+                data = request.POST.dict()
+
+            id_producto = data.get('id_producto')
+            if id_producto:
+                id_producto = id_producto.strip() # <<< CRÍTICO: Recortar espacios para la creación
+
+            nombre_producto = data.get('nombre_producto')
+            cantidad = data.get('cantidad')
+            stock_minimo = data.get('stock_minimo')
+            tipo = data.get('tipo')
+            descripcion = data.get('descripcion')
+            fecha_caducidad = data.get('fecha_caducidad')
+
+            if not all([id_producto, nombre_producto, cantidad, stock_minimo, tipo]):
+                return JsonResponse({'errors': {'general': ['Faltan campos obligatorios.']}}, status=400)
+
+            if Producto.objects.filter(matricula_buque=buque, id_producto=id_producto).exists():
+                return JsonResponse({'errors': {'id_producto': ['El código de producto ya existe para este buque.']}}, status=400)
+
+            if tipo == 'provision' and not fecha_caducidad:
+                return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para las provisiones.']}}, status=400)
+
+            new_producto = Producto(
+                matricula_buque=buque,
+                id_producto=id_producto,
+                nombre_producto=nombre_producto,
+                descripcion=descripcion,
+                cantidad=cantidad,
+                stock_minimo=stock_minimo,
+                tipo=tipo,
+                fecha_caducidad=fecha_caducidad if fecha_caducidad else None,
+            )
+            
+            if 'foto_producto' in request.FILES:
+                new_producto.foto_producto = request.FILES['foto_producto']
+
+            new_producto.save()
+            return JsonResponse({'message': 'Producto creado exitosamente'}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Request body must be valid JSON or FormData'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_producto_detail_update_delete(request, matricula_buque, id_producto):
+    id_producto = id_producto.strip() 
+    
+    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
+    producto = get_object_or_404(Producto, matricula_buque=buque, id_producto=id_producto)
+
+    if request.method == 'POST' and request.POST.get('_method') == 'PUT':
+        try:
+            data = request.POST.dict()
+
+            producto.nombre_producto = data.get('nombre_producto', producto.nombre_producto)
+            producto.descripcion = data.get('descripcion', producto.descripcion)
+            producto.cantidad = data.get('cantidad', producto.cantidad)
+            producto.stock_minimo = data.get('stock_minimo', producto.stock_minimo)
+            producto.tipo = data.get('tipo', producto.tipo) # Asigna el valor entrante directamente
+
+            fecha_caducidad_str = data.get('fecha_caducidad')
+            if producto.tipo == 'provision' and not fecha_caducidad_str:
+                return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para provisiones.']}}, status=400)
+            producto.fecha_caducidad = fecha_caducidad_str if fecha_caducidad_str else None
+
+            if 'foto_producto' in request.FILES:
+                if producto.foto_producto:
+                    try:
+                        old_image_path = producto.foto_producto.path
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                    except ValueError:
+                        pass
+                    except Exception as e:
+                        print(f"Error al intentar eliminar imagen antigua: {e}")
+                producto.foto_producto = request.FILES['foto_producto']
+            elif 'foto_producto' in data and data['foto_producto'] == '':
+                if producto.foto_producto:
+                    try:
+                        old_image_path = producto.foto_producto.path
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                    except ValueError:
+                        pass
+                    except Exception as e:
+                        print(f"Error al intentar eliminar imagen por checkbox: {e}")
+                producto.foto_producto = None
+            
+            # producto.full_clean() # Descomenta si quieres activar la validación completa del modelo
+            producto.save()
+            return JsonResponse({'message': 'Producto actualizado exitosamente'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'POST' and request.POST.get('_method') == 'DELETE':
+        try:
+            if producto.foto_producto:
+                try:
+                    image_path = producto.foto_producto.path
+                    if os.path.exists(image_path):
+                        os.remove(image_path)
+                except ValueError:
+                    pass
+                except Exception as e:
+                    print(f"Error al intentar eliminar imagen al borrar producto: {e}")
+
+            producto.delete()
+            return JsonResponse({'message': 'Producto eliminado exitosamente'}, status=204)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'POST': # Manejo de creación de producto (POST sin _method=PUT/DELETE)
+        try:
+            data = request.POST.dict()
+            files = request.FILES
+            
+            id_producto_nuevo = data.get('id_producto')
+            if not id_producto_nuevo:
+                return JsonResponse({'errors': {'id_producto': ['El código del producto es obligatorio.']}}, status=400)
+
+            if Producto.objects.filter(matricula_buque=buque, id_producto=id_producto_nuevo).exists():
+                return JsonResponse({'errors': {'id_producto': ['Ya existe un producto con este código para este buque.']}}, status=400)
+
+            nuevo_producto = Producto(
+                matricula_buque=buque,
+                id_producto=id_producto_nuevo,
+                nombre_producto=data.get('nombre_producto'),
+                descripcion=data.get('descripcion'),
+                cantidad=data.get('cantidad'),
+                stock_minimo=data.get('stock_minimo'),
+                tipo=data.get('tipo'), # Asigna el valor directamente
+            )
+
+            fecha_caducidad_str = data.get('fecha_caducidad')
+            if nuevo_producto.tipo == 'provision' and not fecha_caducidad_str:
+                return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para provisiones.']}}, status=400)
+            nuevo_producto.fecha_caducidad = fecha_caducidad_str if fecha_caducidad_str else None
+
+            if 'foto_producto' in files:
+                nuevo_producto.foto_producto = files['foto_producto']
+
+            # nuevo_producto.full_clean() # Descomenta si quieres activar la validación completa del modelo
+            nuevo_producto.save()
+            return JsonResponse({'message': 'Producto creado exitosamente'}, status=201)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'GET':
+        producto_data = {
+            'id_producto': producto.id_producto,
+            'nombre_producto': producto.nombre_producto,
+            'descripcion': producto.descripcion,
+            'cantidad': producto.cantidad,
+            'stock_minimo': producto.stock_minimo,
+            'tipo': producto.tipo,
+            'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
+            'imagen_url': producto.foto_producto.url if producto.foto_producto else None,
+        }
+        return JsonResponse(producto_data)
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)

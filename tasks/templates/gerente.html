@@ -13,11 +13,10 @@
             margin-top: 20px;
         }
         .tabla-gerentes tr.selected {
-            background-color: #e3f2fd !important;
+            background-color: #e3f2fd !important; /* Materialize Light Blue accent-1 */
         }
-        #btnEditarGerente {
-            display: none;
-        }
+        
+        /* Estilos de Toast */
         .toast.red {
             background-color: #ef5350 !important;
         }
@@ -34,6 +33,7 @@
             background-color: #8bc34a !important;
         }
 
+        /* Estilos para el campo de contraseña */
         .input-field {
             position: relative;
         }
@@ -49,50 +49,52 @@
             color: #2196F3;
         }
 
+        /* Ocultar los botones de revelado de contraseña por defecto del navegador */
         input[type="password"]::-ms-reveal,
         input[type="password"]::-webkit-reveal-password-button {
             display: none !important;
             -webkit-appearance: none;
         }
-
         input[type="password"]::-ms-clear,
         input[type="password"]::-webkit-contacts-auto-fill-button {
             display: none !important;
             -webkit-appearance: none;
         }
 
+        /* Estilos para la tabla */
         .tabla-gerentes table {
             table-layout: fixed;
             width: 100%;
         }
-
         .tabla-gerentes th,
         .tabla-gerentes td {
             text-align: left;
             padding: 12px 15px;
             vertical-align: middle;
         }
-
         .tabla-gerentes th:nth-child(1),
         .tabla-gerentes td:nth-child(1) {
             width: 5%;
             text-align: center;
         }
-
         .tabla-gerentes th:nth-child(2),
         .tabla-gerentes td:nth-child(2) {
-            width: 40%;
+            width: 30%; /* Ajustado para la nueva columna */
         }
-
         .tabla-gerentes th:nth-child(3),
         .tabla-gerentes td:nth-child(3) {
-            width: 20%;
+            width: 15%; /* Ajustado para la nueva columna */
         }
-        
         .tabla-gerentes th:nth-child(4),
         .tabla-gerentes td:nth-child(4) {
-            width: 40%;
+            width: 30%; /* Ajustado para la nueva columna */
         }
+        /* ADAPTACIÓN: Nuevo estilo para la columna Estado */
+        .tabla-gerentes th:nth-child(5),
+        .tabla-gerentes td:nth-child(5) {
+            width: 20%;
+        }
+
         .no-results-message {
             text-align: center;
             padding: 20px;
@@ -100,17 +102,52 @@
             color: #757575;
         }
 
+        /* Estilos para inputs readonly */
         input[readonly]:not(.browser-default) {
             background-color: transparent !important; 
             border-bottom: 1px solid #9e9e9e !important; 
             color: rgba(0, 0, 0, 0.87) !important; 
         }
-        /* Para que el label flote correctamente con el input readonly */
         .input-field input[readonly]:not(.browser-default) + label {
             transform: translateY(-14px) scale(0.8) !important;
             -webkit-transform: translateY(-14px) scale(0.8) !important;
             transform-origin: 0 0;
             -webkit-transform-origin: 0 0;
+        }
+
+        /* Estilos para centrar la barra de búsqueda y el botón de agregar */
+        .header-controls-row {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center; /* Centra los elementos horizontalmente */
+            align-items: flex-end; /* Alinea los elementos a la parte inferior */
+            gap: 15px; /* Espacio entre columnas */
+        }
+        .header-controls-row .input-field {
+            margin-bottom: 0; /* Elimina el margen inferior extra de los campos de entrada */
+        }
+        .header-controls-row .btn {
+            margin-bottom: 0; /* Alinea los botones con los campos de entrada */
+        }
+
+        /* Estilos para los botones flotantes independientes con animación */
+        #fabEditarGerente, #fabEliminarGerente {
+            position: fixed;
+            z-index: 998;
+            opacity: 0; /* Inicialmente transparentes */
+            transform: translateY(20px); /* Inicialmente ligeramente abajo */
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* Transición para ambos */
+            display: none; /* Oculto por defecto */
+        }
+
+        #fabEliminarGerente {
+            bottom: 85px; /* Posición más arriba que el de editar */
+            right: 24px;
+        }
+
+        #fabEditarGerente {
+            bottom: 23px; /* Posición más abajo */
+            right: 24px;
         }
     </style>
 </head>
@@ -132,8 +169,9 @@
     </div>
 </nav>
     <div class="container">
-        <div class="row" style="margin-top: 20px;">
-            <div class="col s12 m6">
+        <!-- Fila para la barra de búsqueda y el botón de agregar -->
+        <div class="row header-controls-row">
+            <div class="col s12 m6"> <!-- Barra de búsqueda -->
                 <div class="input-field">
                     <i class="material-icons prefix">search</i>
                     <input id="search" type="text" placeholder="Buscar gerente">
@@ -141,27 +179,23 @@
                 </div>
             </div>
 
-            <div class="col s12 m6">
-                <div class="right-align">
-                    <a id="btnEditarGerente" class="waves-effect waves-light btn blue">
-                        <i class="material-icons left">search</i>Ver informacion
-                    </a>
-                    <a class="waves-effect waves-light btn teal modal-trigger" href="#modalGerente" id="btnAgregarGerente">
-                        <i class="material-icons left">add</i>Agregar Gerente
-                    </a>
-                </div>
+            <div class="col s12 m3"> <!-- Botón Agregar Gerente -->
+                <a class="waves-effect waves-light btn teal modal-trigger" href="#modalGerente" id="btnAgregarGerente" style="width: 100%;">
+                    <i class="material-icons left">add</i>Agregar Gerente
+                </a>
             </div>
         </div>
 
         <div class="row tabla-gerentes">
             <div class="col s12">
-                <table class="highlight">
+                <table class="striped highlight"> <!-- Añadida clase 'striped' -->
                     <thead>
                         <tr>
                             <th></th>
                             <th>Nombre</th>
                             <th>Carnet</th>
                             <th>Email</th>
+                            <th>Estado</th> <!-- ADAPTACIÓN: Nueva columna Estado -->
                         </tr>
                     </thead>
                     <tbody id="tablaGerentes">
@@ -169,6 +203,20 @@
                 </table>
             </div>
         </div>
+    </div>
+
+    <!-- Botón flotante para Editar Gerente (aparece al seleccionar) -->
+    <div class="fixed-action-btn" id="fabEditarGerente">
+      <a class="btn-floating btn-large blue modal-trigger" href="#modalGerente">
+        <i class="large material-icons">edit</i>
+      </a>
+    </div>
+
+    <!-- Botón flotante para Eliminar Gerente (aparece al seleccionar) -->
+    <div class="fixed-action-btn" id="fabEliminarGerente">
+      <a class="btn-floating btn-large red">
+        <i class="large material-icons">delete</i>
+      </a>
     </div>
 
     <div id="modalGerente" class="modal">
@@ -202,7 +250,8 @@
         </div>
 
         <div class="modal-footer">
-            <a id="btnEliminarGerente" class="waves-effect waves-light btn red left" style="display: none;">
+            <!-- Botón de eliminar dentro del modal -->
+            <a id="btnEliminarGerenteModal" class="waves-effect waves-light btn red left" style="display: none;">
                 <i class="material-icons left">delete</i>Eliminar
             </a>
             <button type="submit" form="formGerente" class="waves-effect waves-light btn">
@@ -212,20 +261,48 @@
         </div>
     </div>
 
+    <!-- Nuevo Modal de Confirmación de Eliminación para Gerentes -->
+    <div id="confirmDeleteGerenteModal" class="modal">
+        <div class="modal-content">
+            <h4>Confirmar Eliminación</h4>
+            <p>¿Estás seguro de que quieres eliminar al gerente "<strong id="gerenteToDeleteName"></strong>" con carnet "<strong id="gerenteToDeleteCarnet"></strong>"? Esta acción es irreversible.</p>
+        </div>
+        <div class="modal-footer">
+            <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cancelar</a>
+            <a href="#!" id="confirmDeleteGerenteBtn" class="waves-effect waves-red btn red">Eliminar</a>
+        </div>
+    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         var modales = document.querySelectorAll('.modal');
         M.Modal.init(modales);
 
+        // Inicializar el nuevo modal de confirmación para gerentes
+        const confirmDeleteGerenteModalInstance = M.Modal.getInstance(document.getElementById('confirmDeleteGerenteModal'));
+
         axios.defaults.xsrfCookieName = 'csrftoken';
         axios.defaults.xsrfHeaderName = 'X-CSRFToken';
 
         let gerentes = [];
+        let assignedGerentesCarnets = new Set(); // ADAPTACIÓN: Conjunto para almacenar carnets de gerentes asignados
         let gerenteSeleccionado = null;
 
         const tablaGerentes = document.getElementById('tablaGerentes');
         const formGerente = document.getElementById('formGerente');
-        const btnEditar = document.getElementById('btnEditarGerente');
+        // Referencias a los FABs individuales
+        const fabEditarGerenteDiv = document.getElementById('fabEditarGerente');
+        const fabEliminarGerenteDiv = document.getElementById('fabEliminarGerente');
+        const btnEditarGerente = fabEditarGerenteDiv.querySelector('a'); // El <a> dentro del FAB de Editar
+        const btnEliminarGerente = fabEliminarGerenteDiv.querySelector('a'); // El <a> dentro del FAB de Eliminar
+        // Referencia al botón de eliminar dentro del modal
+        const btnEliminarGerenteModal = document.getElementById('btnEliminarGerenteModal'); 
+
+        // Referencias a elementos del modal de confirmación
+        const gerenteToDeleteNameSpan = document.getElementById('gerenteToDeleteName');
+        const gerenteToDeleteCarnetSpan = document.getElementById('gerenteToDeleteCarnet');
+        const confirmDeleteGerenteBtn = document.getElementById('confirmDeleteGerenteBtn');
+
         const modalTitulo = document.getElementById('modalTitulo');
         const btnAccion = document.getElementById('btnAccion');
         const originalCarnetGerenteInput = document.getElementById('originalCarnetGerente');
@@ -233,7 +310,6 @@
         const nombreGerenteInput = document.getElementById('nombreGerente');
         const passGerenteInput = document.getElementById('passGerente');
         const emailGerenteInput = document.getElementById('emailGerente');
-        const btnEliminar = document.getElementById('btnEliminarGerente');
         const searchInput = document.getElementById('search'); 
         const btnAgregarGerente = document.getElementById('btnAgregarGerente');
         
@@ -243,7 +319,6 @@
 
         tablaGerentes.addEventListener('click', function(e) {
             const fila = e.target.closest('tr');
-            // MODIFICACIÓN: Usa la clase 'no-data-row' consistentemente para evitar selección
             if (!fila || fila.classList.contains('no-data-row')) { 
                 resetSeleccion();
                 return;
@@ -254,18 +329,38 @@
             });
 
             fila.classList.add('selected');
-            gerenteSeleccionado = gerentes.find(g => g.carnet_gerente == fila.dataset.carnet);
+            gerenteSeleccionado = gerentes.find(g => String(g.carnet_gerente) === fila.dataset.carnet);
 
-            btnEditar.style.display = 'inline-block';
-            btnEliminar.style.display = 'inline-block'; // Asegúrate de que el botón de eliminar se muestre al seleccionar
+            if (gerenteSeleccionado) {
+                // Mostrar los FABs individuales con animación
+                fabEditarGerenteDiv.style.display = 'block';
+                fabEliminarGerenteDiv.style.display = 'block';
+                // Forzar un reflow para que la transición se aplique correctamente
+                fabEditarGerenteDiv.offsetWidth; 
+                fabEliminarGerenteDiv.offsetWidth; 
+                fabEditarGerenteDiv.style.opacity = '1';
+                fabEditarGerenteDiv.style.transform = 'translateY(0)';
+                fabEliminarGerenteDiv.style.opacity = '1';
+                fabEliminarGerenteDiv.style.transform = 'translateY(0)';
+
+                // El botón de eliminar en el modal también se muestra si es necesario
+                btnEliminarGerenteModal.style.display = 'inline-block'; 
+            } else {
+                // Esto se maneja en resetSeleccion()
+            }
         });
 
-        btnEditar.addEventListener('click', function() {
-            if (!gerenteSeleccionado) return;
+        // Event listener para el botón "Editar" (FAB flotante)
+        btnEditarGerente.addEventListener('click', function() {
+            if (!gerenteSeleccionado) {
+                M.toast({html: 'Por favor, seleccione un gerente para ver su información.', classes: 'orange'});
+                return;
+            }
 
             modalTitulo.textContent = 'Información del Gerente';
             btnAccion.textContent = 'Actualizar';
-            btnEliminar.style.display = 'inline-block';
+            // El botón de eliminar en el modal se muestra aquí también
+            btnEliminarGerenteModal.style.display = 'inline-block'; 
 
             originalCarnetGerenteInput.value = gerenteSeleccionado.carnet_gerente;
             carnetGerenteInput.value = gerenteSeleccionado.carnet_gerente.trim();
@@ -289,27 +384,49 @@
             modal.open();
         });
 
-        btnEliminar.addEventListener('click', function() {
-            if (!gerenteSeleccionado) return;
-        
-            if (confirm(`¿Estás seguro de eliminar al gerente ${gerenteSeleccionado.nombre} con carnet ${gerenteSeleccionado.carnet_gerente}?`)) {
-                axios.delete(`/api/gerentes/${gerenteSeleccionado.carnet_gerente}/`)
+        // Event listener para el botón "Eliminar" (FAB flotante)
+        btnEliminarGerente.addEventListener('click', function() {
+            if (!gerenteSeleccionado) {
+                M.toast({html: 'Por favor, seleccione un gerente para eliminar.', classes: 'orange'});
+                return;
+            }
+            // Mostrar el modal de confirmación en lugar de confirm()
+            gerenteToDeleteNameSpan.textContent = gerenteSeleccionado.nombre;
+            gerenteToDeleteCarnetSpan.textContent = gerenteSeleccionado.carnet_gerente;
+            confirmDeleteGerenteModalInstance.open();
+        });
+
+        // Event listener para el botón de eliminar dentro del modal
+        btnEliminarGerenteModal.addEventListener('click', function() {
+            // Reutiliza la lógica del FAB de eliminar
+            btnEliminarGerente.click();
+        });
+
+        // Lógica de eliminación cuando se confirma en el modal de confirmación
+        confirmDeleteGerenteBtn.addEventListener('click', function() {
+            if (gerenteSeleccionado) {
+                const carnet = gerenteSeleccionado.carnet_gerente;
+                axios.delete(`/api/gerentes/${carnet}/`)
                     .then(response => {
                         M.toast({html: 'Gerente eliminado exitosamente', classes: 'green'});
+                        // Cerrar ambos modales si están abiertos
                         const modal = M.Modal.getInstance(document.getElementById('modalGerente'));
-                        modal.close();
+                        if (modal.isOpen) {
+                            modal.close();
+                        }
+                        confirmDeleteGerenteModalInstance.close();
                         cargarGerentes();
                         resetSeleccion();
                     })
                     .catch(error => {
                         console.error('Error eliminando gerente:', error);
-                        const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Error al eliminar gerente';
-                        // MODIFICACIÓN: Mensaje más específico si el error es por asignación de buque.
+                        const errorMessage = error.response && error.response.data && error.response.data.error ? error.response.data.error : 'Hubo un problema al eliminar el gerente.';
                         if (error.response && error.response.data && error.response.data.error && error.response.data.error.includes("No puede eliminar un gerente asignado a un buque")) {
                             M.toast({html: "No se puede eliminar este gerente porque está asignado a un buque.", classes: 'red'});
                         } else {
-                            M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
+                            M.toast({html: `Error: No puedes eliminar un gerente que esta asignado a un buque`, classes: 'red'});
                         }
+                        confirmDeleteGerenteModalInstance.close(); // Cerrar el modal de confirmación incluso si hay error
                     });
             }
         });
@@ -395,18 +512,27 @@
             });
         });
 
-        function cargarGerentes() {
-            axios.get('/api/gerentes/')
-                .then(response => {
-                    gerentes = response.data;
-                    renderizarTabla();
-                })
-                .catch(error => {
-                    console.error('Error cargando gerentes:', error.response ? error.response.data : error.message);
-                    M.toast({html: 'Error al cargar gerentes', classes: 'red'});
-                    // MODIFICACIÓN: Usar 'no-data-row' y 'center-align'
-                    tablaGerentes.innerHTML = `<tr><td colspan="4" class="no-data-row center-align">Error al cargar gerentes. Intente de nuevo más tarde.</td></tr>`;
+        async function cargarGerentes() { 
+            try {
+                const [gerentesResponse, naviosResponse] = await Promise.all([
+                    axios.get('/api/gerentes/'),
+                    axios.get('/api/navios/') 
+                ]);
+                gerentes = gerentesResponse.data;
+
+                assignedGerentesCarnets.clear();
+                naviosResponse.data.forEach(navio => {
+                    if (navio.carnet_gerente) {
+                        assignedGerentesCarnets.add(String(navio.carnet_gerente));
+                    }
                 });
+
+                renderizarTabla();
+            } catch (error) {
+                console.error('Error cargando gerentes o navíos:', error.response ? error.response.data : error.message);
+                M.toast({html: 'Error al cargar gerentes', classes: 'red'});
+                tablaGerentes.innerHTML = `<tr><td colspan="5" class="no-data-row center-align">Error al cargar gerentes. Intente de nuevo más tarde.</td></tr>`; // ADAPTACIÓN: Colspan 5
+            }
         }
 
         function renderizarTabla() {
@@ -421,28 +547,32 @@
 
             if (filteredGerentes.length === 0) {
                 const tr = document.createElement('tr');
-                // MODIFICACIÓN: Añadir las clases 'no-data-row' y 'center-align'
                 tr.classList.add('no-data-row'); 
                 tr.classList.add('center-align'); 
 
                 let message = '';
-                if (searchTerm === '') {
+                if (searchTerm === '' && gerentes.length === 0) { 
                     message = 'No hay gerentes registrados en el sistema.';
                 } else {
                     message = 'No hay gerentes que coincidan con la búsqueda.';
                 }
 
-                tr.innerHTML = `<td colspan="4">${message}</td>`; 
+                tr.innerHTML = `<td colspan="5">${message}</td>`; // ADAPTACIÓN: Colspan 5
                 tablaGerentes.appendChild(tr);
             } else {
-                tablaGerentes.innerHTML = filteredGerentes.map(gerente => `
-                    <tr data-carnet="${gerente.carnet_gerente}">
-                        <td><i class="material-icons">person</i></td>
-                        <td>${gerente.nombre}</td>
-                        <td>${gerente.carnet_gerente}</td>
-                        <td>${gerente.email}</td>
-                    </tr>
-                `).join('');
+                tablaGerentes.innerHTML = filteredGerentes.map(gerente => {
+                    // ADAPTACIÓN: Determinar el estado del gerente
+                    const estado = assignedGerentesCarnets.has(String(gerente.carnet_gerente)) ? 'Asignado' : 'Disponible';
+                    return `
+                        <tr data-carnet="${gerente.carnet_gerente}">
+                            <td><i class="material-icons">person</i></td>
+                            <td>${gerente.nombre}</td>
+                            <td>${gerente.carnet_gerente}</td>
+                            <td>${gerente.email}</td>
+                            <td>${estado}</td> <!-- ADAPTACIÓN: Nueva celda para el estado -->
+                        </tr>
+                    `;
+                }).join('');
             }
 
             resetSeleccion();
@@ -451,7 +581,7 @@
         btnAgregarGerente.addEventListener('click', function() {
             modalTitulo.textContent = 'Agregar gerente';
             btnAccion.textContent = 'Registrar';
-            btnEliminar.style.display = 'none';
+            btnEliminarGerenteModal.style.display = 'none'; 
             formGerente.reset();
             originalCarnetGerenteInput.value = '';
             carnetGerenteInput.readOnly = false;
@@ -473,8 +603,17 @@
             document.querySelectorAll('#tablaGerentes tr').forEach(row => {
                 row.classList.remove('selected');
             });
-            btnEditar.style.display = 'none';
-            btnEliminar.style.display = 'none'; 
+            fabEditarGerenteDiv.style.opacity = '0';
+            fabEditarGerenteDiv.style.transform = 'translateY(20px)';
+            fabEliminarGerenteDiv.style.opacity = '0';
+            fabEliminarGerenteDiv.style.transform = 'translateY(20px)';
+
+            setTimeout(() => {
+                fabEditarGerenteDiv.style.display = 'none';
+                fabEliminarGerenteDiv.style.display = 'none';
+            }, 300); 
+
+            btnEliminarGerenteModal.style.display = 'none'; 
         }
     });
 </script>
