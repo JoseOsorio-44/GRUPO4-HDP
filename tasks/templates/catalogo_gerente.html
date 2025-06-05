@@ -1,0 +1,622 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <meta charset="UTF-8">
+    <title>OceanTrack - Inventario del Buque</title>
+    <link rel="stylesheet" href="{% static 'css/materialize.min.css' %}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        main {
+            flex: 1 0 auto;
+        }
+        .info-navio {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd; /* Light Blue accent-1 */
+            border-radius: 5px;
+            text-align: center; /* Centrar el texto del nombre del buque */
+        }
+        .tabla-productos {
+            margin-top: 20px;
+        }
+        .tabla-productos tr.selected {
+            background-color: #e3f2fd !important;
+        }
+        /* Estilos para ocultar ciertos elementos */
+        .hidden-field {
+            display: none !important;
+        }
+        /* Estilos para la fila de controles */
+        .controls-row {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap; /* Permite que los elementos se envuelvan */
+            align-items: flex-end; /* Alinea los elementos a la parte inferior (mejora la alineación del botón) */
+            gap: 15px; /* Espacio entre los elementos */
+            justify-content: center; /* Centrar para pantallas más grandes */
+        }
+        /* Ajuste de anchos de columna para los controles */
+        .controls-row .input-field.search-col {
+            flex: 1 1 30%; /* Ajusta el ancho para el buscador */
+            min-width: 200px;
+        }
+        .controls-row .input-field.category-col {
+            flex: 1 1 20%; /* Ajusta el ancho para la categoría */
+            min-width: 150px;
+            max-width: 220px; /* Hacemos el select más pequeño */
+            margin-bottom: 0; /* Elimina el margen inferior predeterminado del input-field para mejor alineación */
+            position: relative; /* Necesario para posicionar correctamente el label */
+            padding-top: 1.25rem; /* Asegura espacio para el label flotante */
+        }
+        .controls-row .alerts-btn-col {
+            flex: 1 1 auto; /* Permite que el botón tome el espacio restante */
+            min-width: 150px; /* Ancho mínimo para el botón */
+            max-width: 200px; /* Ancho máximo para el botón */
+        }
+        .controls-row .btn {
+            margin-top: 0; /* Eliminar margen superior predeterminado de Materialize de los botones */
+            margin-bottom: 0; /* Eliminar margen inferior predeterminado de Materialize de los botones */
+            width: 100%; /* Asegura que el botón ocupe todo el ancho disponible en su columna */
+        }
+
+        /* ESTILO CRÍTICO: Asegura que el select nativo de HTML esté oculto después de la inicialización de Materialize */
+        .input-field select {
+            display: none !important;
+        }
+
+        /* Estilos para el modal de detalle del producto */
+        #modalProducto .modal-content {
+            display: flex;
+            flex-wrap: wrap; /* Permite que los elementos se envuelvan */
+        }
+        #modalProducto .product-image-container {
+            flex: 1 1 40%; /* Toma 40% del ancho, flexible */
+            min-width: 250px; /* Ancho mínimo para la imagen */
+            padding-right: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #modalProducto .product-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            object-fit: contain; /* Asegura que la imagen se ajuste dentro de su contenedor */
+        }
+        #modalProducto .product-details-container {
+            flex: 1 1 55%; /* Ajustado para dejar un poco de espacio si la imagen es 40% */
+            min-width: 300px; /* Ancho mínimo para los detalles */
+        }
+        #modalProducto .input-field input[readonly],
+        #modalProducto .input-field textarea[readonly] {
+            color: #424242; /* Color de texto para campos de solo lectura */
+            border-bottom: 1px solid #9e9e9e; /* Borde inferior para campos de solo lectura */
+        }
+        /* Ajuste para la etiqueta del select en Materialize */
+        /* Asegura que el label del select se posicione correctamente */
+        .input-field select + label { /* Este es para el label del select que Materialize genera */
+            top: 0; /* Ajusta la posición inicial de la etiqueta */
+            left: 0; /* Alineación izquierda */
+            font-size: 1rem; /* Tamaño de fuente inicial */
+            color: #9e9e9e; /* Color inicial de la etiqueta */
+            transition: all 0.2s ease-out; /* Transición suave */
+            pointer-events: none; /* No interactúa con el cursor */
+            position: absolute; /* Posicionamiento absoluto */
+            transform: translateY(0.8rem); /* Pequeño ajuste para centrar verticalmente */
+        }
+        .input-field select:focus + label,
+        .input-field select.active + label,
+        .input-field select:not([multiple]):not([size]):focus + label,
+        .input-field select:not([multiple]):not([size]).active + label {
+            transform: translateY(-0.6rem) scale(0.8); /* Mueve hacia arriba y escala */
+            transform-origin: 0 0;
+            color: #9e9e9e; /* Color de la etiqueta cuando está activa */
+        }
+        /* Ocultar elementos de UI no necesarios para el gerente */
+        #fabAgregarProductoContainer,
+        #fabEditarProductoContainer,
+        #fabEliminarProductoContainer,
+        /* Los siguientes se ocultan con JS, pero aquí para seguridad */
+        .file-field, /* Campo de carga de archivos (fotos) */
+        #stockMinimoField /* Campo de stock mínimo en el modal */
+        {
+            display: none !important;
+        }
+        
+        /* Estilo para el toast de alerta de stock */
+        .toast.stock-alert {
+            background-color: #ffb300 !important; /* Amber color */
+            color: #424242 !important;
+        }
+
+        /* Estilos para el FAB de Ver Información */
+        .fixed-action-btn.info-fab {
+            bottom: 45px;
+            right: 45px;
+            display: none; /* Oculto por defecto, se muestra con JS */
+        }
+        .fixed-action-btn.info-fab a.btn-floating {
+            background-color: #4CAF50; /* Green */
+        }
+    </style>
+</head>
+<body>
+    <script src="{% static 'js/materialize.min.js' %}"></script> 
+
+    <nav class="blue darken-1">
+        <div class="nav-wrapper">
+            <a href="#!" class="brand-logo">
+                <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-right: 10px; vertical-align: middle;">
+                <span>OceanTrack</span>
+            </a>
+            <a href="#!" class="brand-logo center">Inventario del Buque</a>
+            <ul class="right hide-on-med-and-down">
+                <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <!-- Información del Buque del Gerente -->
+            <div class="row">
+                <div class="col s12 info-navio">
+                    <!-- Solo el nombre del buque, centrado -->
+                    <h5 id="nombreBuqueInfo">{{ nombre_buque }}</h5>
+                    <!-- La matrícula ya no se muestra en el UI -->
+                </div>
+            </div>
+
+            <!-- Fila de Controles: Buscador, Filtro de Categoría y Botón de Alertas -->
+            <div class="row controls-row">
+                <div class="col s12 m5 input-field search-col"> 
+                    <i class="material-icons prefix">search</i>
+                    <input id="search" type="text" placeholder="Buscar producto">
+                    <label for="search">Buscar</label>
+                </div>
+                <div class="col s12 m3 input-field category-col">
+                    <select id="filtroCategoria">
+                        <option value="todos" selected>Todas las categorías</option>
+                        <option value="repuesto">Repuesto</option>
+                        <option value="provision">Provisión</option>
+                    </select>
+                    <label>Categoría</label>
+                </div>
+                <div class="col s12 m4 alerts-btn-col">
+                    <!-- Botón de Alertas, ahora en la fila de controles -->
+                    <a id="btnAlertas" class="waves-effect waves-light btn yellow darken-2 white-text">
+                        <i class="material-icons left">warning</i>Alertas
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tabla de Productos -->
+            <div class="row">
+                <div class="col s12 tabla-productos">
+                    <table class="striped highlight responsive-table"> 
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaProductosBody">
+                            <!-- Los productos se cargarán aquí con JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Botón de Acción Flotante (FAB) para "Ver Información" -->
+            <div class="fixed-action-btn info-fab" id="fabVerInformacionContainer">
+                <a id="fabVerInformacion" class="btn-floating btn-large green tooltipped" data-position="left" data-tooltip="Ver Información del Producto">
+                    <i class="large material-icons">visibility</i>
+                </a>
+            </div>
+
+            <!-- Modal para Ver/Editar Producto -->
+            <div id="modalProducto" class="modal modal-fixed-footer">
+                <div class="modal-content">
+                    <h5 id="modalTituloProducto">Información del Producto</h5>
+                    <div class="row">
+                        <!-- Contenedor de la imagen -->
+                        <div class="col s12 m5 product-image-container">
+                            <img id="productoImagen" class="product-image materialboxed" src="https://placehold.co/400x300/e0e0e0/000000?text=Sin+Imagen" alt="Imagen del producto">
+                        </div>
+                        <!-- Contenedor de los detalles del producto -->
+                        <div class="col s12 m7 product-details-container">
+                            <form id="formProducto" action="" method="post">
+                                {% csrf_token %} 
+                                <input type="hidden" id="originalCantidad"> <!-- Campo oculto para la cantidad original -->
+
+                                <div class="input-field">
+                                    <input id="codigoProducto" type="text" readonly>
+                                    <label for="codigoProducto">Código</label>
+                                </div>
+
+                                <div class="input-field">
+                                    <input id="nombreProducto" type="text" readonly>
+                                    <label for="nombreProducto">Nombre</label>
+                                </div>
+
+                                <div class="input-field">
+                                    <textarea id="descripcionProducto" class="materialize-textarea" readonly></textarea>
+                                    <label for="descripcionProducto">Descripción</label>
+                                </div>
+
+                                <div class="input-field">
+                                    <input id="tipoProducto" type="text" readonly>
+                                    <label for="tipoProducto">Tipo</label>
+                                </div>
+
+                                <div class="input-field">
+                                    <input id="cantidadProducto" type="number" min="0" required>
+                                    <label for="cantidadProducto">Cantidad</label>
+                                </div>
+
+                                <!-- Fecha de Caducidad (visible solo para provisiones y solo lectura) -->
+                                <div class="input-field hidden-field" id="fechaCaducidadField">
+                                    <input id="fechaCaducidadProducto" type="text" readonly>
+                                    <label for="fechaCaducidadProducto">Fecha de Caducidad</label>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" form="formProducto" class="waves-effect waves-light btn green" id="btnGuardarCantidad">
+                        <i class="material-icons left">save</i>Guardar Cantidad
+                    </button>
+                    <a href="#!" class="modal-close waves-effect waves-red btn-flat">Cerrar</a>
+                </div>
+            </div>
+
+            <!-- Modal de Alertas -->
+            <div id="alertasModal" class="modal">
+                <div class="modal-content">
+                    <h4>Alertas de Inventario</h4>
+                    <div id="alertasContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <a href="#!" class="modal-close waves-effect waves-green btn-flat">Cerrar</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicialización de componentes Materialize
+        M.AutoInit(); 
+        
+        // Inicializar Tooltips (para el FAB)
+        const tooltips = document.querySelectorAll('.tooltipped');
+        M.Tooltip.init(tooltips);
+
+        // Configuración de Axios para el token CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+        if (csrftoken) {
+            axios.defaults.headers.common['X-CSRFToken'] = csrftoken;
+        }
+
+        // --- Variables Globales ---
+        let todosProductos = []; 
+        let productoSeleccionado = null; 
+        
+        // La información del buque ahora se lee directamente del DOM para asegurarse de que esté presente
+        const nombreBuqueFromDOM = document.getElementById('nombreBuqueInfo').textContent;
+        // La matrícula no se muestra, pero su valor sigue siendo importante para las llamadas a la API
+        const matriculaBuqueForAPI = '{{ matricula_buque|escapejs }}'; // Usamos la variable de contexto para la API
+
+        // --- Referencias a Elementos del DOM ---
+        const tablaProductosBody = document.getElementById('tablaProductosBody');
+        const searchInput = document.getElementById('search');
+        const filtroCategoriaSelect = document.getElementById('filtroCategoria'); 
+        const btnAlertas = document.getElementById('btnAlertas'); // Botón de alertas
+        const fabVerInformacionContainer = document.getElementById('fabVerInformacionContainer'); // Contenedor del FAB
+        const fabVerInformacion = document.getElementById('fabVerInformacion'); // El FAB en sí
+
+        const modalProductoInstance = M.Modal.getInstance(document.getElementById('modalProducto'));
+        const alertasModalInstance = M.Modal.getInstance(document.getElementById('alertasModal'));
+        const alertasContent = document.getElementById('alertasContent');
+
+        const codigoProductoInput = document.getElementById('codigoProducto');
+        const nombreProductoInput = document.getElementById('nombreProducto');
+        const descripcionProductoInput = document.getElementById('descripcionProducto');
+        const tipoProductoInput = document.getElementById('tipoProducto');
+        const cantidadProductoInput = document.getElementById('cantidadProducto');
+        const fechaCaducidadField = document.getElementById('fechaCaducidadField');
+        const fechaCaducidadProductoInput = document.getElementById('fechaCaducidadProducto');
+        const productoImagen = document.getElementById('productoImagen');
+        const originalCantidadInput = document.getElementById('originalCantidad'); 
+        const btnGuardarCantidad = document.getElementById('btnGuardarCantidad');
+
+        // Cargar datos iniciales al cargar la página
+        cargarDatosIniciales();
+
+        // --- Funciones de Carga de Datos y Renderizado ---
+
+        async function cargarDatosIniciales() {
+            try {
+                // Verificar si la matrícula es válida para las llamadas a la API
+                if (!matriculaBuqueForAPI || matriculaBuqueForAPI === 'No disponible' || matriculaBuqueForAPI.trim() === '') {
+                    M.toast({html: 'Error: No se pudo obtener la matrícula del buque para cargar productos.', classes: 'red'});
+                    renderizarTablaProductos([]);
+                    return;
+                }
+
+                // Obtener productos del buque del gerente (a través de la API)
+                // Esta API YA DEBE FILTRAR POR LA MATRÍCULA EN LA SESIÓN DEL GERENTE
+                const responseProductos = await axios.get('/api/gerente/productos/');
+                todosProductos = responseProductos.data;
+                
+                aplicarFiltrosYRenderizar(); 
+                resetSeleccion(); // Asegura que el FAB esté oculto al inicio
+
+                mostrarAlertas();
+
+            } catch (error) {
+                console.error("Error al cargar datos iniciales:", error.response || error);
+                const errorMessage = error.response?.data?.error || error.message || 'Error al cargar los productos del buque.';
+                M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
+                renderizarTablaProductos([]); 
+            }
+        }
+
+        // --- Implementación de la función aplicarFiltrosYRenderizar con la lógica proporcionada ---
+        function aplicarFiltrosYRenderizar() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            // Obtenemos el valor directamente del select
+            const categoriaFiltro = filtroCategoriaSelect.value; 
+            
+            console.log('--- Aplicando filtros ---');
+            console.log('Término de búsqueda (searchTerm):', searchTerm);
+            console.log('Categoría seleccionada (categoriaFiltro):', categoriaFiltro);
+
+            const productosFiltrados = todosProductos.filter(producto => {
+                // Filtro por nombre, descripción o CÓDIGO de producto
+                const matchesSearch = producto.nombre_producto.toLowerCase().includes(searchTerm) || 
+                                      (producto.descripcion && producto.descripcion.toLowerCase().includes(searchTerm)) || // Asegurar que descripción exista
+                                      producto.codigo_producto.toLowerCase().includes(searchTerm); 
+                
+                // Filtro por categoría (provisión/repuesto)
+                // Usamos String(producto.tipo).trim() para asegurar que sea una cadena sin espacios
+                const matchesCategory = categoriaFiltro === 'todos' || String(producto.tipo).toLowerCase().trim() === categoriaFiltro;
+                
+                // Para depuración:
+                console.log(`Producto: ${producto.nombre_producto}, Tipo: ${producto.tipo}, Match Search: ${matchesSearch}, Match Category: ${matchesCategory}`);
+
+                return matchesSearch && matchesCategory; 
+            });
+            renderizarTablaProductos(productosFiltrados);
+        }
+
+        function renderizarTablaProductos(productosVisibles) {
+            tablaProductosBody.innerHTML = ''; 
+
+            if (productosVisibles.length === 0) {
+                const tr = document.createElement('tr');
+                tr.classList.add('no-data-row');
+                const message = (searchInput.value.trim() === '' && filtroCategoriaSelect.value === 'todos') ? 'No hay productos registrados en este buque.' : 'No hay coincidencias para tu búsqueda o filtro.';
+                tr.innerHTML = `<td colspan="5" class="center-align">${message}</td>`;
+                tablaProductosBody.appendChild(tr);
+                return;
+            }
+
+            productosVisibles.forEach(producto => {
+                const tr = document.createElement('tr');
+                tr.dataset.codigo = producto.codigo_producto;
+
+                // Determinar el icono basado en el tipo de producto
+                let iconName = '';
+                if (producto.tipo.toLowerCase().trim() === 'provision') {
+                    iconName = 'fastfood'; // Icono para provisiones
+                } else if (producto.tipo.toLowerCase().trim() === 'repuesto') {
+                    iconName = 'build'; // Icono para repuestos
+                } else {
+                    iconName = 'label'; // Icono por defecto si el tipo no coincide o es desconocido
+                }
+
+                tr.innerHTML = `
+                    <td><i class="material-icons">${iconName}</i></td>
+                    <td>${producto.codigo_producto}</td>
+                    <td>${producto.nombre_producto}</td>
+                    <td>${producto.tipo.charAt(0).toUpperCase() + producto.tipo.slice(1)}</td>
+                    <td>${producto.cantidad}</td>
+                `;
+                tablaProductosBody.appendChild(tr);
+            });
+        }
+
+        function resetSeleccion() {
+            productoSeleccionado = null;
+            document.querySelectorAll('#tablaProductosBody tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+            fabVerInformacionContainer.style.display = 'none'; // Oculta el FAB
+        }
+
+        function mostrarAlertas() {
+            const productosBajos = todosProductos.filter(p => p.cantidad <= p.stock_minimo); 
+            const productosCaducados = todosProductos.filter(p => {
+                if (p.tipo.trim().toLowerCase() === 'provision' && p.fecha_caducidad) { 
+                    const hoy = new Date();
+                    const caducidad = new Date(p.fecha_caducidad);
+                    return caducidad <= hoy; 
+                }
+                return false;
+            });
+
+            let mensajeAlertas = '';
+
+            if (productosBajos.length > 0) {
+                mensajeAlertas += `<h6>Productos bajo stock mínimo (${productosBajos.length}):</h6>`;
+                mensajeAlertas += `<ul class="collection">`;
+                productosBajos.forEach(p => {
+                    mensajeAlertas += `<li class="collection-item"><strong>${p.nombre_producto}</strong>: Quedan ${p.cantidad} (Stock Mínimo: ${p.stock_minimo})</li>`;
+                });
+                mensajeAlertas += `</ul>`;
+            }
+            
+            if (productosCaducados.length > 0) {
+                if (mensajeAlertas) mensajeAlertas += '<br>';
+                mensajeAlertas += `<h6>Productos caducados (${productosCaducados.length}):</h6>`;
+                mensajeAlertas += `<ul class="collection">`;
+                productosCaducados.forEach(p => {
+                    mensajeAlertas += `<li class="collection-item"><strong>${p.nombre_producto}</strong>: Caducado el ${p.fecha_caducidad}</li>`;
+                });
+                mensajeAlertas += `</ul>`;
+            }
+
+            if (mensajeAlertas) {
+                alertasContent.innerHTML = mensajeAlertas;
+                alertasModalInstance.open();
+            } else {
+                M.toast({html: 'No hay alertas de productos en este momento.', classes: 'green'});
+            }
+        }
+
+        // --- Event Listeners ---
+
+        searchInput.addEventListener('input', aplicarFiltrosYRenderizar);
+        // Utiliza el evento 'change' en el select para activar el filtro
+        filtroCategoriaSelect.addEventListener('change', aplicarFiltrosYRenderizar);
+        btnAlertas.addEventListener('click', mostrarAlertas); // Event listener para el botón de alertas
+
+        tablaProductosBody.addEventListener('click', function(e) {
+            const fila = e.target.closest('tr');
+            if (!fila || fila.classList.contains('no-data-row')) {
+                resetSeleccion();
+                return;
+            }
+
+            document.querySelectorAll('#tablaProductosBody tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+            fila.classList.add('selected');
+
+            productoSeleccionado = todosProductos.find(p => String(p.codigo_producto) === fila.dataset.codigo);
+            
+            if (productoSeleccionado) {
+                fabVerInformacionContainer.style.display = 'block'; // Muestra el FAB
+            } else {
+                fabVerInformacionContainer.style.display = 'none'; // Oculta el FAB
+            }
+        });
+
+        fabVerInformacion.addEventListener('click', function() {
+            if (productoSeleccionado) {
+                prepararModalParaVerProducto(productoSeleccionado.codigo_producto);
+            } else {
+                M.toast({html: 'Seleccione un producto para ver su información.', classes: 'orange'});
+            }
+        });
+        
+        document.getElementById('formProducto').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (!productoSeleccionado) {
+                M.toast({html: 'Error: No hay producto seleccionado para guardar.', classes: 'red'});
+                return;
+            }
+
+            const newCantidad = parseInt(cantidadProductoInput.value);
+            const originalCantidad = parseInt(originalCantidadInput.value); 
+
+            if (isNaN(newCantidad)) {
+                M.toast({html: 'La cantidad debe ser un número válido.', classes: 'red'});
+                return;
+            }
+
+            if (newCantidad > originalCantidad) {
+                M.toast({html: 'No se puede aumentar la cantidad del producto.', classes: 'red'});
+                return;
+            }
+            if (newCantidad < 0) {
+                M.toast({html: 'La cantidad no puede ser negativa.', classes: 'red'});
+                return;
+            }
+
+            try {
+                const response = await axios.put(`/api/gerente/productos/${productoSeleccionado.codigo_producto}/update_cantidad/`, {
+                    cantidad: newCantidad
+                });
+                M.toast({html: response.data.message, classes: 'green'});
+                modalProductoInstance.close();
+                cargarDatosIniciales(); 
+            } catch (error) {
+                console.error("Error al actualizar cantidad:", error.response || error);
+                const errorMessage = error.response?.data?.error || error.response?.data?.errors?.cantidad?.[0] || error.message || 'Error al guardar la cantidad.';
+                M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
+            }
+        });
+
+        // --- Funciones para el Modal de Producto ---
+
+        async function prepararModalParaVerProducto(codigoProducto) {
+            try {
+                const response = await axios.get(`/api/gerente/productos/${codigoProducto}/`);
+                const producto = response.data;
+
+                codigoProductoInput.value = producto.codigo_producto;
+                nombreProductoInput.value = producto.nombre_producto;
+                descripcionProductoInput.value = producto.descripcion;
+                tipoProductoInput.value = producto.tipo;
+                cantidadProductoInput.value = producto.cantidad;
+                originalCantidadInput.value = producto.cantidad; 
+
+                if (producto.tipo.trim().toLowerCase() === 'provision') {
+                    fechaCaducidadField.classList.remove('hidden-field');
+                    fechaCaducidadProductoInput.value = producto.fecha_caducidad || '';
+                } else {
+                    fechaCaducidadField.classList.add('hidden-field');
+                    fechaCaducidadProductoInput.value = '';
+                }
+
+                if (producto.foto_producto_url) {
+                    productoImagen.src = producto.foto_producto_url;
+                } else {
+                    productoImagen.src = "https://placehold.co/400x300/e0e0e0/000000?text=Sin+Imagen";
+                }
+
+                M.updateTextFields();
+                
+                const materialboxedInstance = M.Materialbox.init(productoImagen);
+
+                modalProductoInstance.open();
+
+            } catch (error) {
+                console.error("Error al cargar detalle del producto:", error.response || error);
+                const errorMessage = error.response?.data?.error || error.message || 'Error al cargar la información del producto.';
+                M.toast({html: `Error: ${errorMessage}`, classes: 'red'});
+            }
+        }
+    });
+    </script>
+</body>
+</html>

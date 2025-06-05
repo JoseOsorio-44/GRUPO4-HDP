@@ -29,8 +29,13 @@ urlpatterns = [
     # ---- INICIO: Rutas para el CRUD de Productos (NUEVAS) ----
     path('inventario/<str:matricula_buque>/', views.catalogo_view, name='catalogos'),
     path('api/inventario/<str:matricula_buque>/productos/', views.api_productos_list_create, name='api_productos_list_create'),
-    path('api/inventario/<str:matricula_buque>/productos/<str:id_producto>/', views.api_producto_detail_update_delete, name='api_producto_detail_update_delete'),
+    path('api/inventario/<str:matricula_buque>/productos/<str:codigo_producto_url>/', views.api_producto_detail_update_delete, name='api_producto_detail_update_delete'),
     # ---- FIN: Rutas para el CRUD de Productos ----
+    
+    
+    path('api/gerente/productos/', views.api_productos_gerente_list, name='api_productos_gerente_list'),
+    path('api/gerente/productos/<str:codigo_producto>/', views.api_producto_gerente_detail, name='api_producto_gerente_detail'),
+    path('api/gerente/productos/<str:codigo_producto>/update_cantidad/', views.api_producto_gerente_update_cantidad, name='api_producto_gerente_update_cantidad'),
 ]
 
 # Configuración para servir archivos de medios durante el desarrollo

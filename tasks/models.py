@@ -35,10 +35,9 @@ class Gerente(models.Model):
 
 
 class Producto(models.Model):
-    id_producto = models.CharField(primary_key=True, max_length=15)
+    codigo_producto = models.CharField(primary_key=True, max_length=15) 
     matricula_buque = models.ForeignKey(Buque, models.DO_NOTHING, db_column='matricula_buque', blank=True, null=True)
-    carnet_gerente = models.ForeignKey(Gerente, models.DO_NOTHING, db_column='carnet_gerente', blank=True, null=True)
-    carnet_admin = models.ForeignKey(Administrador, models.DO_NOTHING, db_column='carnet_admin', blank=True, null=True)
+    carnet_admin = models.ForeignKey(Administrador, models.DO_NOTHING, db_column='carnet_admin', blank=True, null=True) # O carnet_gerente si era el caso
     nombre_producto = models.CharField(max_length=25)
     descripcion = models.CharField(max_length=100)
     foto_producto = models.ImageField(upload_to='media/', blank=True, null=True) 

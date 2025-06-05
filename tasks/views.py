@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from tasks.models import Administrador, Gerente, Buque, Producto
 from django.contrib import messages
 from django.urls import reverse
@@ -8,7 +8,7 @@ from django.views.decorators.http import require_http_methods
 import json
 import traceback
 import os
-from datetime import datetime
+from django.contrib.auth.decorators import login_required
 
 
 def home(request):
@@ -78,18 +78,6 @@ def admin_dashboard(request):
         'role': rol_logueado
     })
 
-
-#vista de gerente
-@role_required(allowed_roles=['gerente'])
-def gerente_dashboard(request):
-    carnet_gerente_logueado = request.session.get('username')
-    rol_logueado = request.session.get('user_role')
-    matricula_buque_asociada = request.session.get('buque_matricula')
-    return render(request, 'incompleto.html', {
-        'username': carnet_gerente_logueado,
-        'role': rol_logueado,
-        'buque_matricula': matricula_buque_asociada
-    })
 
 
 #vista de sin permisos
@@ -391,7 +379,6 @@ def gerente_list(request):
 
 
 
-
 @role_required(allowed_roles=['admin', 'gerente'])
 @require_http_methods(["GET", "POST"])
 def producto_list_create(request):
@@ -436,246 +423,13 @@ def producto_list_create(request):
 
 
 
-
+@role_required(allowed_roles=['admin'])
 def catalogo_view(request, matricula_buque):
     buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
     productos = Producto.objects.filter(matricula_buque=buque)
     return render(request, 'catalogo_admin.html', {'buque': buque, 'productos': productos})
 
-
-
-
 @role_required(allowed_roles=['admin'])
-@require_http_methods(["GET", "POST"])
-def api_productos_list_create(request, matricula_buque):
-    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
-
-    if request.method == 'GET':
-        productos = Producto.objects.filter(matricula_buque=buque).order_by('nombre_producto')
-        data = []
-        for producto in productos:
-            data.append({
-                'id_producto': producto.id_producto.strip() if producto.id_producto else None, 
-                'nombre_producto': producto.nombre_producto,
-                'descripcion': producto.descripcion,
-                'cantidad': producto.cantidad,
-                'stock_minimo': producto.stock_minimo,
-                'tipo': producto.tipo,
-                'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
-                'imagen_url': producto.foto_producto.url if producto.foto_producto else None,
-            })
-        return JsonResponse(data, safe=False)
-
-    elif request.method == 'POST':
-        try:
-            if request.content_type == 'application/json':
-                data = json.loads(request.body)
-            else: # Asumimos FormData
-                data = request.POST.dict()
-
-            id_producto = data.get('id_producto')
-            if id_producto:
-                id_producto = id_producto.strip() 
-
-            nombre_producto = data.get('nombre_producto')
-            cantidad = data.get('cantidad')
-            stock_minimo = data.get('stock_minimo')
-            tipo = data.get('tipo')
-            descripcion = data.get('descripcion')
-            fecha_caducidad = data.get('fecha_caducidad')
-
-            if not all([id_producto, nombre_producto, cantidad, stock_minimo, tipo]):
-                return JsonResponse({'errors': {'general': ['Faltan campos obligatorios.']}}, status=400)
-
-            if Producto.objects.filter(matricula_buque=buque, id_producto=id_producto).exists():
-                return JsonResponse({'errors': {'id_producto': ['El código de producto ya existe para este buque.']}}, status=400)
-
-            if tipo == 'provision' and not fecha_caducidad:
-                return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para las provisiones.']}}, status=400)
-
-            admin_username = request.session.get('username')
-            admin_instance = None
-            if admin_username:
-                try:
-                    admin_instance = Administrador.objects.get(carnet_admin=admin_username)
-                except Administrador.DoesNotExist:
-                    return JsonResponse({'error': f'Administrador con carnet "{admin_username}" no encontrado.'}, status=400)
-                except Exception as e:
-                    traceback.print_exc()
-                    return JsonResponse({'error': f'Error al obtener instancia de Administrador: {str(e)}'}, status=500)
-            else:
-                return JsonResponse({'error': 'No se pudo obtener el carnet del administrador de la sesión.'}, status=401)
-
-
-            new_producto = Producto(
-                matricula_buque=buque,
-                id_producto=id_producto,
-                nombre_producto=nombre_producto,
-                descripcion=descripcion,
-                cantidad=cantidad,
-                stock_minimo=stock_minimo,
-                tipo=tipo,
-                fecha_caducidad=fecha_caducidad if fecha_caducidad else None,
-                carnet_admin = admin_instance 
-            )
-            
-            if 'foto_producto' in request.FILES:
-                new_producto.foto_producto = request.FILES['foto_producto']
-
-            new_producto.save()
-            return JsonResponse({'message': 'Producto creado exitosamente'}, status=201)
-
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Request body must be valid JSON or FormData'}, status=400)
-        except Exception as e:
-            traceback.print_exc() 
-            return JsonResponse({'error': str(e)}, status=500)
-
-
-@role_required(allowed_roles=['admin'])
-@require_http_methods(["GET", "POST"])
-def api_producto_detail_update_delete(request, matricula_buque, id_producto):
-    id_producto = id_producto.strip() 
-    
-    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
-    producto = get_object_or_404(Producto, matricula_buque=buque, id_producto=id_producto)
-
-    if request.method == 'POST' and request.POST.get('_method') == 'PUT':
-        try:
-            data = request.POST.dict()
-
-            producto.nombre_producto = data.get('nombre_producto', producto.nombre_producto)
-            producto.descripcion = data.get('descripcion', producto.descripcion)
-            producto.cantidad = data.get('cantidad', producto.cantidad)
-            producto.stock_minimo = data.get('stock_minimo', producto.stock_minimo)
-            producto.tipo = data.get('tipo', producto.tipo)
-            
-            admin_username = request.session.get('username')
-            admin_instance = None
-            if admin_username:
-                try:
-                    admin_instance = Administrador.objects.get(carnet_admin=admin_username)
-                except Administrador.DoesNotExist:
-                    return JsonResponse({'error': f'Administrador con carnet "{admin_username}" no encontrado para la actualización.'}, status=400)
-                except Exception as e:
-                    traceback.print_exc()
-                    return JsonResponse({'error': f'Error al obtener instancia de Administrador para actualización: {str(e)}'}, status=500)
-            else:
-                return JsonResponse({'error': 'No se pudo obtener el carnet del administrador de la sesión para la actualización.'}, status=401)
-            
-            producto.carnet_admin = admin_instance 
-
-
-            fecha_caducidad_str = data.get('fecha_caducidad')
-            if producto.tipo == 'provision' and not fecha_caducidad_str:
-                return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para provisiones.']}}, status=400)
-            producto.fecha_caducidad = fecha_caducidad_str if fecha_caducidad_str else None
-
-            if 'foto_producto' in request.FILES:
-                if producto.foto_producto:
-                    try:
-                        old_image_path = producto.foto_producto.path
-                        if os.path.exists(old_image_path):
-                            os.remove(old_image_path)
-                    except ValueError:
-                        pass
-                    except Exception as e:
-                        print(f"Error al intentar eliminar imagen antigua: {e}")
-                producto.foto_producto = request.FILES['foto_producto']
-            elif 'foto_producto' in data and data['foto_producto'] == '':
-                if producto.foto_producto:
-                    try:
-                        old_image_path = producto.foto_producto.path
-                        if os.path.exists(old_image_path):
-                            os.remove(old_image_path)
-                    except ValueError:
-                        pass
-                    except Exception as e:
-                        print(f"Error al intentar eliminar imagen por checkbox: {e}")
-                producto.foto_producto = None
-            
-            producto.save()
-            return JsonResponse({'message': 'Producto actualizado exitosamente'}, status=200)
-
-        except Exception as e:
-            traceback.print_exc()
-            return JsonResponse({'error': str(e)}, status=500)
-
-    elif request.method == 'POST' and request.POST.get('_method') == 'DELETE':
-        try:
-            if producto.foto_producto:
-                try:
-                    image_path = producto.foto_producto.path
-                    if os.path.exists(image_path):
-                        os.remove(image_path)
-                except ValueError:
-                    pass
-                except Exception as e:
-                    print(f"Error al intentar eliminar imagen al borrar producto: {e}")
-
-            producto.delete()
-            return JsonResponse({'message': 'Producto eliminado exitosamente'}, status=204)
-
-        except Exception as e:
-            traceback.print_exc()
-            return JsonResponse({'error': str(e)}, status=500)
-
-    elif request.method == 'POST': 
-        try:
-            data = request.POST.dict()
-            files = request.FILES
-            
-            id_producto_nuevo = data.get('id_producto')
-            if not id_producto_nuevo:
-                return JsonResponse({'errors': {'id_producto': ['El código del producto es obligatorio.']}}, status=400)
-
-            if Producto.objects.filter(matricula_buque=buque, id_producto=id_producto_nuevo).exists():
-                return JsonResponse({'errors': {'id_producto': ['Ya existe un producto con este código para este buque.']}}, status=400)
-
-            nuevo_producto = Producto(
-                matricula_buque=buque,
-                id_producto=id_producto_nuevo,
-                nombre_producto=data.get('nombre_producto'),
-                descripcion=data.get('descripcion'),
-                cantidad=data.get('cantidad'),
-                stock_minimo=data.get('stock_minimo'),
-                tipo=data.get('tipo'),
-                carnet_admin = request.session.get('username') 
-                
-            )
-
-            fecha_caducidad_str = data.get('fecha_caducidad')
-            if nuevo_producto.tipo == 'provision' and not fecha_caducidad_str:
-                return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para provisiones.']}}, status=400)
-            nuevo_producto.fecha_caducidad = fecha_caducidad_str if fecha_caducidad_str else None
-
-            if 'foto_producto' in files:
-                nuevo_producto.foto_producto = files['foto_producto']
-
-            nuevo_producto.save()
-            return JsonResponse({'message': 'Producto creado exitosamente'}, status=201)
-
-        except Exception as e:
-            traceback.print_exc() 
-            return JsonResponse({'error': str(e)}, status=500)
-
-    elif request.method == 'GET':
-        producto_data = {
-            'id_producto': producto.id_producto,
-            'nombre_producto': producto.nombre_producto,
-            'descripcion': producto.descripcion,
-            'cantidad': producto.cantidad,
-            'stock_minimo': producto.stock_minimo,
-            'tipo': producto.tipo,
-            'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
-            'imagen_url': producto.foto_producto.url if producto.foto_producto else None,
-        }
-        return JsonResponse(producto_data)
-
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-
-
 @require_http_methods(["POST"])
 def api_administrador_create(request):
     try:
@@ -719,3 +473,361 @@ def api_administrador_create(request):
         print(f"ERROR VIEWS (Administrador): Error en la creación del administrador: {e}")
         # Puedes añadir más detalle si es un ValidationError de Django
         return JsonResponse({'error': str(e)}, status=500)
+
+
+
+
+
+
+
+@role_required(allowed_roles=['admin'])
+@require_http_methods(["GET", "POST"])
+def api_productos_list_create(request, matricula_buque):
+    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
+
+    if request.method == 'GET':
+        productos = Producto.objects.filter(matricula_buque=buque).order_by('nombre_producto')
+        data = []
+        for producto in productos:
+            data.append({
+                'codigo_producto': producto.codigo_producto, # Usamos codigo_producto (es la PK)
+                'nombre_producto': producto.nombre_producto,
+                'descripcion': producto.descripcion,
+                'cantidad': producto.cantidad,
+                'stock_minimo': producto.stock_minimo,
+                'tipo': producto.tipo,
+                'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
+                'imagen_url': producto.foto_producto.url if producto.foto_producto else None,
+            })
+        return JsonResponse(data, safe=False)
+
+    elif request.method == 'POST':
+        try:
+            data = request.POST.dict()
+            files = request.FILES
+
+            # Ahora necesitamos recibir el CODIGO_PRODUCTO del frontend
+            incoming_codigo_producto = data.get('codigo_producto', '').strip()
+            nombre_producto = data.get('nombre_producto', '').strip()
+            cantidad = data.get('cantidad')
+            stock_minimo = data.get('stock_minimo')
+            tipo = data.get('tipo', '').strip()
+            descripcion = data.get('descripcion', '')
+            fecha_caducidad = data.get('fecha_caducidad')
+
+            if not all([incoming_codigo_producto, nombre_producto, cantidad, stock_minimo, tipo]):
+                return JsonResponse({'errors': {'general': ['Faltan campos obligatorios (incluyendo Código de Producto).']}}, status=400)
+
+            # Validar unicidad de codigo_producto (es la PK)
+            if Producto.objects.filter(codigo_producto=incoming_codigo_producto).exists():
+                return JsonResponse({'errors': {'codigo_producto': ['Ya existe un producto con este código.']}}, status=400)
+
+            if tipo == 'provision' and not fecha_caducidad:
+                return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para las provisiones.']}}, status=400)
+
+            admin_username = request.session.get('username')
+            admin_instance = None
+            if admin_username:
+                try:
+                    admin_instance = Administrador.objects.get(carnet_admin=admin_username)
+                except Administrador.DoesNotExist:
+                    return JsonResponse({'error': f'Administrador con carnet "{admin_username}" no encontrado.'}, status=400)
+                except Exception as e:
+                    return JsonResponse({'error': str(e)}, status=500)
+
+            new_producto = Producto(
+                codigo_producto=incoming_codigo_producto,
+                matricula_buque=buque,
+                nombre_producto=nombre_producto,
+                descripcion=descripcion,
+                cantidad=cantidad,
+                stock_minimo=stock_minimo,
+                tipo=tipo,
+                fecha_caducidad=fecha_caducidad if fecha_caducidad else None,
+                carnet_admin=admin_instance
+            )
+
+            if 'foto_producto' in files:
+                new_producto.foto_producto = files['foto_producto']
+            else:
+                new_producto.foto_producto = None # Set to None if no file is provided
+
+            new_producto.save()
+            return JsonResponse({'message': 'Producto creado exitosamente'}, status=201)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@role_required(allowed_roles=['admin'])
+@require_http_methods(["GET", "POST"])
+def api_producto_detail_update_delete(request, matricula_buque, codigo_producto_url): # Usamos codigo_producto_url
+    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
+    # Buscamos por codigo_producto, que es la PK
+    producto = get_object_or_404(Producto, codigo_producto=codigo_producto_url.strip())
+
+    if request.method == 'POST' and request.POST.get('_method') == 'PUT':
+        try:
+            data = request.POST.dict()
+
+            # El código de producto no se cambia al actualizar (es la PK)
+            nombre_producto = data.get('nombre_producto', producto.nombre_producto).strip()
+            descripcion = data.get('descripcion', producto.descripcion).strip()
+            cantidad = data.get('cantidad', producto.cantidad)
+            stock_minimo = data.get('stock_minimo', producto.stock_minimo)
+            # 'tipo' is intentionally not updated here as per request
+            # tipo = data.get('tipo', producto.tipo).strip()
+            fecha_caducidad = data.get('fecha_caducidad')
+            eliminar_imagen = data.get('eliminar_imagen_checkbox') == 'true'
+
+            if not all([nombre_producto, cantidad, stock_minimo]): # 'tipo' removed from required fields for update
+                return JsonResponse({'errors': {'general': ['Faltan campos obligatorios para actualizar.']}}, status=400)
+
+            # Use producto.tipo for validation since it's not being updated
+            if producto.tipo == 'provision' and not fecha_caducidad:
+                return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para provisiones.']}}, status=400)
+
+            admin_username = request.session.get('username')
+            admin_instance = None
+            if admin_username:
+                try:
+                    admin_instance = Administrador.objects.get(carnet_admin=admin_username)
+                except Administrador.DoesNotExist:
+                    return JsonResponse({'error': f'Administrador con carnet "{admin_username}" no encontrado para la actualización.'}, status=400)
+                except Exception as e:
+                    return JsonResponse({'error': str(e)}, status=500)
+
+            # No se actualiza producto.codigo_producto aquí, solo los otros campos
+            producto.nombre_producto = nombre_producto
+            producto.descripcion = descripcion
+            producto.cantidad = cantidad
+            producto.stock_minimo = stock_minimo
+            # producto.tipo = tipo # This line is commented out to make it read-only for updates
+            producto.fecha_caducidad = fecha_caducidad if fecha_caducidad else None
+            producto.carnet_admin = admin_instance
+
+            if eliminar_imagen:
+                if producto.foto_producto:
+                    try:
+                        old_image_path = producto.foto_producto.path
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                    except ValueError:
+                        pass
+                    except Exception as e:
+                        pass
+                producto.foto_producto = None
+            elif 'foto_producto' in request.FILES:
+                if producto.foto_producto:
+                    try:
+                        old_image_path = producto.foto_producto.path
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                    except ValueError:
+                        pass
+                    except Exception as e:
+                        pass
+                producto.foto_producto = request.FILES['foto_producto']
+            elif not request.FILES and not eliminar_imagen:
+                # If no new file is uploaded and delete checkbox is not checked, keep current image.
+                # Do nothing, as producto.foto_producto already holds the current image.
+                pass
+            
+            producto.save()
+            return JsonResponse({'message': 'Producto actualizado exitosamente'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'POST' and request.POST.get('_method') == 'DELETE':
+        try:
+            if producto.foto_producto:
+                try:
+                    image_path = producto.foto_producto.path
+                    if os.path.exists(image_path):
+                        os.remove(image_path)
+                except ValueError:
+                    pass
+                except Exception as e:
+                    pass
+
+            producto.delete()
+            return JsonResponse({'message': 'Producto eliminado exitosamente'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    elif request.method == 'GET':
+        producto_data = {
+            'codigo_producto': producto.codigo_producto, # Usamos codigo_producto (es la PK)
+            'nombre_producto': producto.nombre_producto,
+            'descripcion': producto.descripcion,
+            'cantidad': producto.cantidad,
+            'stock_minimo': producto.stock_minimo,
+            'tipo': producto.tipo,
+            'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
+            'imagen_url': producto.foto_producto.url if producto.foto_producto else None,
+        }
+        return JsonResponse(producto_data)
+
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+@role_required(allowed_roles=['gerente'])
+def gerente_dashboard(request):
+    """
+    Vista principal para el gerente, ahora renderizando productos.html.
+    Obtiene la matrícula del buque de la sesión y pasa la información del buque al contexto.
+    """
+    carnet_gerente_logueado = request.session.get('username')
+    rol_logueado = request.session.get('user_role')
+    matricula_buque_asociada = request.session.get('buque_matricula')
+
+    nombre_buque_display = "Buque no encontrado"
+    if not matricula_buque_asociada:
+        # Si no hay matrícula en sesión, se le informa al usuario
+        return HttpResponse("No se encontró una matrícula de buque asociada a tu sesión. Por favor, contacta a un administrador.", status=403)
+
+    try:
+        buque = Buque.objects.get(matricula_buque=matricula_buque_asociada.strip()) # <--- .strip() aquí
+        nombre_buque_display = buque.nombre_buque
+    except Buque.DoesNotExist:
+        # Si el buque no existe en la base de datos, aunque la matrícula esté en sesión
+        return HttpResponse("El buque asociado a tu sesión no existe en la base de datos. Por favor, contacta a un administrador.", status=404)
+
+    context = {
+        'username': carnet_gerente_logueado,
+        'role': rol_logueado,
+        'matricula_buque': matricula_buque_asociada.strip(), # <--- .strip() aquí
+        'nombre_buque': nombre_buque_display,
+    }
+    return render(request, 'catalogo_gerente.html', context)
+
+
+
+
+
+
+
+@role_required(allowed_roles=['gerente'])
+@require_http_methods(["GET"])
+def api_productos_gerente_list(request):
+    """
+    API para obtener la lista de productos que coinciden con la matricula_buque
+    del gerente logueado.
+    """
+    matricula_buque_gerente = request.session.get('buque_matricula')
+    
+    if not matricula_buque_gerente:
+        return JsonResponse({'error': 'Matrícula de buque no encontrada en la sesión.'}, status=403)
+
+    try:
+        # Asegúrate de que la matrícula usada para la consulta no tenga espacios
+        buque = Buque.objects.get(matricula_buque=matricula_buque_gerente.strip()) # <--- .strip() aquí
+    except Buque.DoesNotExist:
+        return JsonResponse({'error': 'El buque asociado no existe.'}, status=404)
+
+    productos = Producto.objects.filter(matricula_buque=buque).order_by('nombre_producto')
+    
+    productos_data = []
+    for producto in productos:
+        foto_url = None
+        if producto.foto_producto:
+            # Asegura que la URL de la imagen no tenga espacios extra
+            foto_url = request.build_absolute_uri(producto.foto_producto.url).strip() # <--- .strip() aquí
+            
+        productos_data.append({
+            'codigo_producto': producto.codigo_producto.strip(), # <--- .strip() aquí
+            'nombre_producto': producto.nombre_producto.strip(), # <--- .strip() aquí
+            'tipo': producto.tipo.strip(), # <--- .strip() aquí
+            'cantidad': producto.cantidad,
+            'stock_minimo': producto.stock_minimo,
+            'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
+            'foto_producto_url': foto_url
+        })
+        
+    return JsonResponse(productos_data, safe=False)
+
+
+@role_required(allowed_roles=['gerente'])
+@require_http_methods(["GET"])
+def api_producto_gerente_detail(request, codigo_producto):
+    """
+    API para obtener los detalles de un producto específico,
+    verificando que pertenece al buque del gerente logueado.
+    """
+    matricula_buque_gerente = request.session.get('buque_matricula')
+    
+    if not matricula_buque_gerente:
+        return JsonResponse({'error': 'Matrícula de buque no encontrada en la sesión.'}, status=403)
+
+    # Asegúrate de que el código de producto de la URL y la matrícula de la sesión no tengan espacios
+    producto = get_object_or_404(
+        Producto, 
+        codigo_producto=codigo_producto.strip(), # <--- .strip() aquí
+        matricula_buque__matricula_buque=matricula_buque_gerente.strip() # <--- .strip() aquí
+    )
+
+    foto_url = None
+    if producto.foto_producto:
+        # Asegura que la URL de la imagen no tenga espacios extra
+        foto_url = request.build_absolute_uri(producto.foto_producto.url).strip() # <--- .strip() aquí
+
+    producto_data = {
+        'codigo_producto': producto.codigo_producto.strip(),
+        'nombre_producto': producto.nombre_producto.strip(),
+        'descripcion': producto.descripcion.strip() if producto.descripcion else '', # <--- .strip() y manejar None
+        'cantidad': producto.cantidad,
+        'stock_minimo': producto.stock_minimo, 
+        'tipo': producto.tipo.strip(),
+        'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
+        'foto_producto_url': foto_url,
+    }
+    return JsonResponse(producto_data)
+
+
+@role_required(allowed_roles=['gerente'])
+@require_http_methods(["PUT"])
+def api_producto_gerente_update_cantidad(request, codigo_producto):
+    """
+    API para actualizar solo la cantidad de un producto.
+    Permite reducir la cantidad pero NO aumentarla.
+    """
+    matricula_buque_gerente = request.session.get('buque_matricula')
+    
+    if not matricula_buque_gerente:
+        return JsonResponse({'error': 'Matrícula de buque no encontrada en la sesión.'}, status=403)
+
+    # Asegúrate de que el código de producto de la URL y la matrícula de la sesión no tengan espacios
+    producto = get_object_or_404(
+        Producto, 
+        codigo_producto=codigo_producto.strip(), # <--- .strip() aquí
+        matricula_buque__matricula_buque=matricula_buque_gerente.strip() # <--- .strip() aquí
+    )
+    
+    try:
+        data = json.loads(request.body)
+        new_cantidad = int(data.get('cantidad'))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return JsonResponse({'error': 'Cantidad no válida proporcionada.'}, status=400)
+
+    # Validación de cantidad: NO se puede aumentar
+    if new_cantidad > producto.cantidad:
+        return JsonResponse({'error': f'No se puede aumentar la cantidad de {producto.nombre_producto.strip()} (actual: {producto.cantidad}).'}, status=400)
+    
+    # Validación de cantidad: NO puede ser negativa
+    if new_cantidad < 0:
+        return JsonResponse({'error': 'La cantidad no puede ser menor a cero.'}, status=400)
+
+    original_cantidad = producto.cantidad
+    producto.cantidad = new_cantidad
+    producto.save()
+
+    return JsonResponse({
+        'message': f'Cantidad de "{producto.nombre_producto.strip()}" actualizada de {original_cantidad} a {producto.cantidad}.',
+        'cantidad_actual': producto.cantidad,
+        'stock_minimo': producto.stock_minimo 
+    })
+

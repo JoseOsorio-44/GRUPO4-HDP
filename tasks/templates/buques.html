@@ -63,6 +63,36 @@
             bottom: 23px; /* Posición más abajo */
             right: 24px;
         }
+
+
+        /* Estilos específicos para el label del select de Gerente Asignado */
+    .input-field #gerenteNavio ~ label {
+        pointer-events: none; /* Asegura que no interfiera con el click en el select */
+        transition: transform .2s ease-out, color .2s ease-out; /* Transición suave */
+    }
+
+    /* Cuando el select tiene un valor (no es el placeholder vacío) */
+    .input-field #gerenteNavio:not([value=""]) ~ label {
+        transform: translateY(-14px) scale(0.8); /* Mueve y escala la etiqueta */
+        transform-origin: top left; /* Punto de origen para la transformación */
+        color: #1e88e5 !important; /* Materialize blue accent-3 - Color cuando está flotando */
+    }
+
+    /* Asegúrate de que el color sea gris cuando el campo está vacío y no enfocado */
+    .input-field #gerenteNavio[value=""] ~ label {
+        color: #9e9e9e !important; /* Materialize grey text color */
+        transform: translateY(0) scale(1); /* Posición normal */
+    }
+
+    /* Cuando el campo está enfocado */
+    .input-field #gerenteNavio:focus ~ label {
+        color: #1e88e5 !important; /* Color cuando está enfocado */
+    }
+
+    /* Ajuste para que el "Gerente Asignado" no quede debajo del input anterior */
+    .input-field:has(#gerenteNavio) {
+        margin-top: 50px; /* Incrementa el margen superior del campo de gerente */
+    }
     </style>
 </head>
 
