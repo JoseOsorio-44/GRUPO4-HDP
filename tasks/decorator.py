@@ -20,10 +20,10 @@ def role_required(allowed_roles=None):
 
             if not user_role:
                 messages.error(request, 'Debes iniciar sesión para acceder a esta página.')
-                return redirect(reverse('login'))
+                return redirect(reverse('inicio:login'))
             elif user_role not in allowed_roles:
                 messages.warning(request, 'Acceso denegado.') 
-                return redirect(reverse('no_permission')) 
+                return redirect(reverse('inicio:denegado')) 
 
             return view_func(request, *args, **kwargs)
         return _wrapped_view

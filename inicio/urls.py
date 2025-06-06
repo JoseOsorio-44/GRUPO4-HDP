@@ -13,7 +13,7 @@ urlpatterns = [
     path('api/login/', views.autentificacion_usuario, name='api_login'),
     
     #Ruta a acceso denegado a vista
-    path('Denegado/', views.sin_permisos, name='no_permission'),
+    path('Denegado/', views.sin_permisos, name='denegado'),
     
     #Ruta a cierre desesion
     path('logout/', views.logout_view, name='logout'),

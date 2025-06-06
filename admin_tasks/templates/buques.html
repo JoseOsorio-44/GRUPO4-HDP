@@ -27,16 +27,16 @@
         /* Estilos para centrar la barra de búsqueda y el botón de agregar */
         .header-controls-row {
             margin-top: 20px;
-            display: flex;
-            justify-content: center; /* Centra los elementos horizontalmente */
-            align-items: flex-end; /* Alinea los elementos a la parte inferior */
+            display: flex;          /* 1. Hace que el contenedor sea un flex container */
+            justify-content: center; /* 2. Centra los elementos hijos horizontalmente */
+            align-items: flex-end;  /* 3. ¡CLAVE! Alinea los elementos hijos a la parte inferior de la línea flex */
             gap: 15px; /* Espacio entre columnas */
         }
         .header-controls-row .input-field {
-            margin-bottom: 0; /* Elimina el margen inferior extra de los campos de entrada */
+            margin-bottom: 0; /* 4. Elimina el margen inferior extra de los campos de entrada */
         }
         .header-controls-row .btn {
-            margin-bottom: 0; /* Alinea los botones con los campos de entrada */
+            margin-bottom: 0; /* 5. Alinea los botones con los campos de entrada */
         }
 
         /* Estilos para los botones flotantes independientes con animación */
@@ -125,7 +125,6 @@
             </div>
 
             <div class="col s12 m3"> <!-- Botón Agregar Navío -->
-                <!-- El atributo modal-trigger y href ya están aquí para que Materialize lo maneje -->
                 <a id="btnAgregarNavio" class="waves-effect waves-light btn teal modal-trigger" href="#modalNavio" style="width: 100%;">
                     <i class="material-icons left">add</i>Agregar Navío
                 </a>

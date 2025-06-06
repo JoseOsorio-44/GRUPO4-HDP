@@ -59,11 +59,8 @@
         }
 
         .search-filter-row .select-wrapper input.select-dropdown {
-            margin-bottom: 0;
+            margin-bottom: 0 !important;
         }
-
-        /* Contenedores de los FABs flotantes - CONTROL MANUAL COMPLETO */
-        /* Eliminamos la clase 'fixed-action-btn' de todos los FABs en el HTML */
 
         #fabAgregarProductoContainer,
         #fabEditarProductoContainer,
@@ -149,7 +146,7 @@
             </a>
             <a href="#!" class="brand-logo center">Inventario</a>
             <ul class="right hide-on-med-and-down">
-                <li><a href="{% url 'admin_tasks:buques' %}"><i class="material-icons left">directions_boat</i>Volver a Navíos</a></li>
+                <li><a href="{% url 'admin_tasks:buques' %}"><i class="material-icons left">directions_boat</i>Volver a Buques</a></li>
                 <li><a href="{% url 'inicio:logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
             </ul>
         </div>
