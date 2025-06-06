@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style>
-        /* ESTILOS ORIGINALES DE prosuctos.html -->funcional */
+        /* ESTILOS ORIGINALES DE productos.html */
         .info-navio {
             margin-top: 20px;
             padding: 15px;
@@ -62,34 +62,66 @@
             margin-bottom: 0;
         }
 
-        /* Estilos para los botones flotantes independientes con animación (estilo navios.html) */
-        #fabAgregarProductoContainer {
-            position: fixed;
-            bottom: 23px; /* Posición más baja */
-            right: 24px;
-            z-index: 998;
-        }
+        /* Contenedores de los FABs flotantes - CONTROL MANUAL COMPLETO */
+        /* Eliminamos la clase 'fixed-action-btn' de todos los FABs en el HTML */
 
+        #fabAgregarProductoContainer,
         #fabEditarProductoContainer,
-        #fabEliminarProductoContainer {
+        #fabEliminarProductoContainer,
+        #fabAlertasContainer {
             position: fixed;
             right: 24px;
-            z-index: 998;
-            opacity: 0; /* Inicialmente transparentes */
-            transform: translateY(20px);
-            /* Inicialmente ligeramente abajo */
-            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-            /* Transición para ambos */
-            display: none;
-            /* Oculto por defecto */
+            z-index: 1000; /* Aseguramos que estén siempre por encima */
         }
 
-        #fabEditarProductoContainer {
-            bottom: 85px; /* Posición media */
+        /* Posiciones específicas para cada botón FAB */
+        #fabAgregarProductoContainer {
+            bottom: 23px; 
+            opacity: 1; /* Siempre visible */
+            transform: translateY(0);
+            display: block; /* Siempre visible */
         }
+
+        /* INICIO DE LOS CAMBIOS PARA LA POSICIÓN DE FAB ALERTAS */
+        #fabAlertasContainer {
+            bottom: 85px; /* Nueva posición para Alertas (encima de Agregar) */
+            opacity: 1; /* Siempre visible */
+            transform: translateY(0);
+            display: block; /* Siempre visible */
+        }
+
         #fabEliminarProductoContainer {
-            bottom: 147px; /* Posición más alta */
+            bottom: 147px; /* Nueva posición para Eliminar (encima de Alertas) */
+            opacity: 0; /* Oculto por defecto */
+            transform: translateY(20px); /* Ligeramente abajo */
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* Transición */
+            display: none; /* Oculto por defecto */
         }
+        
+        #fabEditarProductoContainer {
+            bottom: 209px; /* Posición para editar (encima de Eliminar) */
+            opacity: 0; /* Oculto por defecto */
+            transform: translateY(20px); /* Ligeramente abajo */
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* Transición */
+            display: none; /* Oculto por defecto */
+        }
+        /* FIN DE LOS CAMBIOS PARA LA POSICIÓN DE FAB ALERTAS */
+
+
+        /* Estilos para el badge de alertas */
+        #alertasBadge {
+            position: absolute;
+            top: -0px; /* Ajusta la posición vertical del badge */
+            right: -0px; /* Ajusta la posición horizontal del badge */
+            padding: 4px 8px;
+            border-radius: 50%;
+            background-color: #F44336; /* Rojo para el badge */
+            color: white;
+            font-size: 0.8em;
+            font-weight: bold;
+            display: none; /* Inicialmente oculto si no hay alertas */
+        }
+
 
         /* Asegurar que los colores de los FABs no se desvanezcan */
         .btn-floating.green {
@@ -100,6 +132,9 @@
         }
         .btn-floating.red {
             background-color: #F44336 !important; /* Rojo Materialize */
+        }
+        .btn-floating.yellow.darken-2 {
+            background-color: #FBC02D !important; /* Amarillo oscuro Materialize */
         }
     </style>
 </head>
@@ -148,12 +183,6 @@
                     <label for="filtroCategoria">Categorías</label>
                 </div>
             </div>
-
-            <div class="col s12 m2"> 
-                <a id="btnAlertas" class="btn yellow darken-2 waves-light" style="width: 100%;">
-                    <i class="material-icons">warning</i> Alertas
-                </a>
-            </div>
         </div>
 
         <div class="row">
@@ -162,7 +191,7 @@
                     <thead>
                         <tr>
                             <th></th> 
-                            <th>Código</th> {# Título de la columna ajustado #}
+                            <th>Código</th> 
                             <th>Nombre</th>
                             <th>Tipo</th>
                             <th>Cantidad</th>
@@ -175,21 +204,28 @@
             </div>
         </div>
 
-        <div class="fixed-action-btn" id="fabAgregarProductoContainer">
-            <a class="btn-floating btn-large green modal-trigger" href="#modalProducto" id="btnAgregarProductoFab">
+        <div id="fabAgregarProductoContainer">
+            <a class="btn-floating btn-large green" id="btnAgregarProductoFab">
                 <i class="material-icons">add</i>
             </a>
         </div>
 
-        <div class="fixed-action-btn" id="fabEditarProductoContainer">
-            <a class="btn-floating btn-large blue modal-trigger" href="#modalProducto" id="btnEditarProductoFab">
-                <i class="material-icons">edit</i>
+        <div id="fabAlertasContainer">
+            <a class="btn-floating btn-large yellow darken-2" id="btnAlertasFab">
+                <i class="material-icons">warning</i>
+                <span id="alertasBadge" class="new badge red" data-badge-caption="">0</span>
             </a>
         </div>
 
-        <div class="fixed-action-btn" id="fabEliminarProductoContainer">
+        <div id="fabEliminarProductoContainer">
             <a class="btn-floating btn-large red" id="btnEliminarProductoFab">
                 <i class="material-icons">delete</i>
+            </a>
+        </div>
+
+        <div id="fabEditarProductoContainer">
+            <a class="btn-floating btn-large blue modal-trigger" href="#modalProducto" id="btnEditarProductoFab">
+                <i class="material-icons">edit</i>
             </a>
         </div>
 
@@ -201,7 +237,7 @@
                     <input type="hidden" id="methodField" name="_method">
                     <div class="row">
                         <div class="input-field col s12">
-                            <input id="codigoProductoInput" type="text" name="codigo_producto" required> {# Usar codigo_producto #}
+                            <input id="codigoProductoInput" type="text" name="codigo_producto" required> 
                             <label for="codigoProductoInput">Código del Producto</label>
                         </div>
                         <div class="input-field col s12">
@@ -271,37 +307,58 @@
             </div>
         </div>
 
-    </div>
+        <div id="modalAlertas" class="modal">
+            <div class="modal-content">
+                <h4>Alertas de Inventario</h4>
+                <div id="alertasContent">
+                    </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#!" class="modal-close waves-green btn-flat">Cerrar</a>
+            </div>
+        </div>
 
+    </div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Inicialización de Modales: Asegurarse de que el modal de producto reinicie la selección al cerrarse
+            // Inicialización de Modales
             var modalProductoElem = document.getElementById('modalProducto');
             var confirmDeleteProductoModalElem = document.getElementById('confirmDeleteProductoModal');
+            var modalAlertasElem = document.getElementById('modalAlertas');
 
             const modalProductoInstance = M.Modal.init(modalProductoElem, {
                 onCloseEnd: function() {
-                    // Esta función se ejecuta después de que el 'modalProducto' termina de cerrarse
                     resetSeleccion();
                 }
             });
-            const confirmDeleteProductoModalInstance = M.Modal.init(confirmDeleteProductoModalElem); // Inicializa otros modales normalmente
+            const confirmDeleteProductoModalInstance = M.Modal.init(confirmDeleteProductoModalElem);
+            const alertasModalInstance = M.Modal.init(modalAlertasElem);
 
-            // Initialize ALL selects on page load. This is crucial for the filter select.
+
+            // Inicialización de selects
             var elemsSelect = document.querySelectorAll('select');
             M.FormSelect.init(elemsSelect);
 
-            // Referencias a los contenedores de los FABs individuales
+            // NO SE INICIALIZA NINGÚN FAB CON M.FloatingActionButton.init()
+            // Todos los FABs serán controlados directamente por nuestro JS y CSS.
+
+            // Referencias a los contenedores de los FABs
             const fabAgregarProductoContainer = document.getElementById('fabAgregarProductoContainer');
             const fabEditarProductoContainer = document.getElementById('fabEditarProductoContainer');
             const fabEliminarProductoContainer = document.getElementById('fabEliminarProductoContainer');
+            const fabAlertasContainer = document.getElementById('fabAlertasContainer');
             
-            // Referencias a elementos del DOM
-            const tablaProductosBody = document.getElementById('tablaProductosBody');
+            // Referencias a elementos de los botones FAB
             const btnAgregarProductoFab = document.getElementById('btnAgregarProductoFab');
             const btnEditarProductoFab = document.getElementById('btnEditarProductoFab');
             const btnEliminarProductoFab = document.getElementById('btnEliminarProductoFab'); 
+            const btnAlertasFab = document.getElementById('btnAlertasFab');
+            const alertasBadge = document.getElementById('alertasBadge');
+            const alertasContent = document.getElementById('alertasContent');
 
+
+            // Referencias a otros elementos del DOM
+            const tablaProductosBody = document.getElementById('tablaProductosBody');
             const modalProducto = document.getElementById('modalProducto');
             const modalTitle = document.getElementById('modalTitle');
             const formProducto = document.getElementById('formProducto');
@@ -320,28 +377,33 @@
 
             const searchInput = document.getElementById('search');
             const filtroCategoriaSelect = document.getElementById('filtroCategoria');
-            const btnAlertas = document.getElementById('btnAlertas');
 
             const productoToDeleteNameSpan = document.getElementById('productoToDeleteName');
             const productoToDeleteIdSpan = document.getElementById('productoToDeleteId');
             const confirmDeleteProductoBtn = document.getElementById('confirmDeleteProductoBtn');
 
             // Variables de estado
-            let allProductos = [];
+            let todosProductos = [];
             let selectedRow = null;
             let isEditing = false;
             const matriculaBuque = "{{ buque.matricula_buque }}";
+
+            // NUEVA VARIABLE DE ESTADO PARA CONTROLAR EL DATEPICKER
+            let isDatepickerOpen = false;
 
             // Funciones para mostrar/ocultar los FABs de editar/eliminar
             function showFabButtons() {
                 fabEditarProductoContainer.style.display = 'block';
                 fabEliminarProductoContainer.style.display = 'block';
+                // fabAlertasContainer.style.display = 'block'; // El de alertas ya está siempre visible
                 setTimeout(() => {
                     fabEditarProductoContainer.style.opacity = '1';
                     fabEditarProductoContainer.style.transform = 'translateY(0)';
                     fabEliminarProductoContainer.style.opacity = '1';
                     fabEliminarProductoContainer.style.transform = 'translateY(0)';
-                }, 50); // Pequeño retardo para la transición
+                    // fabAlertasContainer.style.opacity = '1'; // Ya está siempre visible
+                    // fabAlertasContainer.style.transform = 'translateY(0)'; // Ya está siempre visible
+                }, 50);
             }
 
             function hideFabButtons() {
@@ -352,10 +414,10 @@
                 setTimeout(() => {
                     fabEditarProductoContainer.style.display = 'none';
                     fabEliminarProductoContainer.style.display = 'none';
-                }, 300); // Coincide con la duración de la transición
+                }, 300);
             }
 
-            // Inicialización del Datepicker
+            // Inicialización del Datepicker - AÑADIR onOpen y onClose
             M.Datepicker.init(fechaCaducidadInput, {
                 format: 'yyyy-mm-dd',
                 autoClose: true,
@@ -367,6 +429,12 @@
                     weekdays: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
                     weekdaysShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
                     weekdaysAbbrev: ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+                },
+                onOpen: function() {
+                    isDatepickerOpen = true;
+                },
+                onClose: function() {
+                    isDatepickerOpen = false;
                 }
             });
 
@@ -403,8 +471,9 @@
             function cargarProductos() {
                 axios.get(`/api/inventario/${matriculaBuque}/productos/`)
                     .then(response => {
-                        allProductos = response.data; // Almacena todos los productos cargados
-                        aplicarFiltrosYRenderizar(); // Aplica filtros y renderiza la tabla
+                        todosProductos = response.data;
+                        aplicarFiltrosYRenderizar();
+                        actualizarContadorAlertas();
                     })
                     .catch(error => {
                         console.error("Error al cargar productos:", error.response || error);
@@ -413,11 +482,10 @@
                             M.toast({html: 'Error al cargar productos: ' + errorMessage, classes: 'red darken-2'});
                         } catch (toastError) {
                             console.error("Error al mostrar toast:", toastError);
-                            // Usar una alternativa a alert() si es posible, pero para errores críticos puede ser último
-                            // Aquí se mantiene alert() como en el original, pero se prefiere M.toast.
                             alert('Error al cargar productos. Consulta la consola para más detalles.');
                         }
                         tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">Error al cargar productos.</td></tr>`;
+                        actualizarContadorAlertas(); 
                     });
             }
 
@@ -426,13 +494,11 @@
                 const searchTerm = searchInput.value.toLowerCase().trim();
                 const categoriaFiltro = filtroCategoriaSelect.value; 
 
-                const filtered = allProductos.filter(producto => {
-                    // Filtro por nombre, descripción o CÓDIGO de producto
+                const filtered = todosProductos.filter(producto => {
                     const matchesSearch = producto.nombre_producto.toLowerCase().includes(searchTerm) || 
                                           producto.descripcion.toLowerCase().includes(searchTerm) ||
                                           producto.codigo_producto.toLowerCase().includes(searchTerm);
                     
-                    // Filtro por categoría (provisión/repuesto)
                     const matchesCategory = !categoriaFiltro || String(producto.tipo).trim() === categoriaFiltro;
                     
                     return matchesSearch && matchesCategory; 
@@ -445,9 +511,9 @@
 
             // Función para renderizar la tabla con los productos filtrados
             function renderizarTabla(productosAmostrar) {
-                tablaProductosBody.innerHTML = ''; // Limpiar la tabla antes de renderizar
+                tablaProductosBody.innerHTML = '';
 
-                if (allProductos.length === 0) {
+                if (todosProductos.length === 0) {
                     tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">No hay productos registrados en este buque.</td></tr>`;
                     return;
                 }
@@ -462,7 +528,7 @@
                     row.setAttribute('data-id', producto.codigo_producto);
                     row.innerHTML = `
                         <td><i class="material-icons">${producto.tipo.trim() === 'provision' ? 'fastfood' : 'build'}</i></td>
-                        <td>${producto.codigo_producto}</td> {# Muestra el codigo_producto #}
+                        <td>${producto.codigo_producto}</td>
                         <td>${producto.nombre_producto}</td>
                         <td>${producto.tipo.trim() === 'provision' ? 'Provisión' : 'Repuesto'}</td>
                         <td>${producto.cantidad}</td>
@@ -470,7 +536,7 @@
                     `;
                     tablaProductosBody.appendChild(row);
                 });
-                resetSeleccion(); // Resetea la selección después de renderizar
+                resetSeleccion();
             }
 
             // Evento para seleccionar una fila de la tabla
@@ -481,36 +547,14 @@
                     return;
                 }
 
-                // Eliminar la clase 'selected' de todas las filas
                 document.querySelectorAll('#tablaProductosBody tr').forEach(r => {
                     r.classList.remove('selected');
                 });
 
-                selectedRow = row; // Guarda la fila seleccionada
-                selectedRow.classList.add('selected'); // Añade la clase 'selected'
+                selectedRow = row;
+                selectedRow.classList.add('selected');
                 
-                showFabButtons(); // Muestra los botones de editar/eliminar al seleccionar
-            });
-
-            // Evento para deseleccionar una fila al hacer clic fuera de la tabla/FAB/modal
-            // La deselección ahora se maneja cuando el modal de edición se cierra (onCloseEnd)
-            document.addEventListener('click', function(e) { 
-                const clickedInsideTable = e.target.closest('.tabla-productos');
-                const clickedInsideFabContainer = e.target.closest('#fabAgregarProductoContainer') ||
-                                                  e.target.closest('#fabEditarProductoContainer') ||
-                                                  e.target.closest('#fabEliminarProductoContainer');
-                const clickedInsideModal = e.target.closest('.modal');
-                // Comprobar si el clic ocurrió dentro de cualquier parte de la interfaz de usuario del Datepicker de Materialize
-                const clickedInsideDatepicker = e.target.closest('.datepicker') ||
-                                                e.target.closest('.datepicker-modal') ||
-                                                e.target.closest('.picker__wrap') ||
-                                                e.target.closest('.picker__box');
-
-                // La lógica de deselección directa de 'selectedRow' se ha movido al onCloseEnd del modalProducto.
-                // Esta condición se mantiene por si se desea añadir otra lógica basada en clics "fuera" que no afecte selectedRow.
-                // if (!clickedInsideTable && !clickedInsideFabContainer && !clickedInsideModal && !clickedInsideDatepicker && selectedRow) {
-                //     // resetSeleccion(); // YA NO SE LLAMA AQUÍ DIRECTAMENTE
-                // }
+                showFabButtons();
             });
 
             // Función para resetear la selección de la fila
@@ -519,33 +563,53 @@
                     selectedRow.classList.remove('selected');
                 }
                 selectedRow = null;
-                hideFabButtons(); // Oculta los botones de editar/eliminar al deseleccionar
+                hideFabButtons();
             }
+
+            // Evento para deseleccionar una fila al hacer clic fuera de la tabla/FAB/modal/datepicker
+            document.addEventListener('click', function(e) { 
+                const clickedInsideTable = e.target.closest('.tabla-productos');
+                const clickedInsideFabContainer = e.target.closest('#fabAgregarProductoContainer') ||
+                                                  e.target.closest('#fabEditarProductoContainer') ||
+                                                  e.target.closest('#fabEliminarProductoContainer') ||
+                                                  e.target.closest('#fabAlertasContainer'); 
+                const clickedInsideModal = e.target.closest('.modal');
+                
+                // Si el modal de producto está abierto o el datepicker está abierto, no deseleccionar
+                if (modalProductoInstance.isOpen || isDatepickerOpen) {
+                    return; // No deseleccionar si el modal de edición está abierto o el datepicker está activo
+                }
+
+                if (!clickedInsideTable && !clickedInsideFabContainer && selectedRow) {
+                    // Si el clic no fue en la tabla, ni en un FAB, ni en el modal de producto (ya cubierto por modalProductoInstance.isOpen)
+                    // Y hay una fila seleccionada, reseteamos la selección.
+                    resetSeleccion();
+                }
+            });
+
 
             // Botón "Agregar Producto" en el FAB
             btnAgregarProductoFab.addEventListener('click', function() { 
                 isEditing = false;
                 modalTitle.textContent = 'Nuevo Producto';
-                formProducto.reset(); // Limpia el formulario
+                formProducto.reset();
 
-                // Habilitar el select de tipoProducto y reinicializar Materialize
                 tipoProductoSelect.removeAttribute('disabled');
-                // Comprobar si existe una instancia antes de destruirla
                 const selectInstance = M.FormSelect.getInstance(tipoProductoSelect);
                 if (selectInstance) {
                     selectInstance.destroy();
                 }
-                tipoProductoSelect.value = ''; // Ensure no option is selected by default for new product
+                tipoProductoSelect.value = '';
                 M.FormSelect.init(tipoProductoSelect);
 
-                codigoProductoInput.readOnly = false; // El código es editable para nuevos productos
-                fechaCaducidadDiv.style.display = 'none'; // Ocultar fecha de caducidad por defecto
-                fechaCaducidadInput.value = ''; // Ensure date is empty for new products
-                imagenActualPreview.innerHTML = ''; // Limpiar previsualización de imagen
-                eliminarImagenCheckbox.checked = false; // Desmarcar checkbox de eliminar imagen
-                eliminarImagenCheckbox.parentElement.style.display = 'none'; // Ocultar opción de eliminar imagen
-                M.updateTextFields(); // Actualizar el estado de los labels de Materialize
-                modalProductoInstance.open(); // Abrir el modal
+                codigoProductoInput.readOnly = false;
+                fechaCaducidadDiv.style.display = 'none';
+                fechaCaducidadInput.value = '';
+                imagenActualPreview.innerHTML = '';
+                eliminarImagenCheckbox.checked = false;
+                eliminarImagenCheckbox.parentElement.style.display = 'none';
+                M.updateTextFields();
+                modalProductoInstance.open();
             });
 
             // Botón "Editar Producto" en el FAB
@@ -554,24 +618,21 @@
                     isEditing = true;
                     modalTitle.textContent = 'Editar Producto';
                     formProducto.reset();
-                    codigoProductoInput.readOnly = true; // El código no es editable al editar (es PK)
+                    codigoProductoInput.readOnly = true;
                     
                     const codigoProducto = selectedRow.dataset.id.trim();
                     
-                    eliminarImagenCheckbox.parentElement.style.display = 'block'; // Mostrar opción de eliminar imagen
+                    eliminarImagenCheckbox.parentElement.style.display = 'block';
 
-                    // Realizar petición GET para obtener los detalles del producto
                     axios.get(`/api/inventario/${matriculaBuque}/productos/${codigoProducto}/`)
                         .then(response => {
                             const producto = response.data;
-                            // Rellenar el formulario con los datos del producto
                             codigoProductoInput.value = producto.codigo_producto ? String(producto.codigo_producto).trim() : '';
                             nombreProductoInput.value = producto.nombre_producto ? String(producto.nombre_producto).trim() : '';
                             descripcionInput.value = producto.descripcion ? String(producto.descripcion).trim() : '';
                             cantidadInput.value = producto.cantidad;
                             stockMinimoInput.value = producto.stock_minimo;
                             
-                            // Hacer el select de tipoProducto de solo lectura (deshabilitado)
                             tipoProductoSelect.setAttribute('disabled', 'disabled');
                             const selectInstance = M.FormSelect.getInstance(tipoProductoSelect);
                             if (selectInstance) {
@@ -580,7 +641,6 @@
                             tipoProductoSelect.value = producto.tipo ? String(producto.tipo).trim() : '';
                             M.FormSelect.init(tipoProductoSelect);
 
-                            // Mostrar/ocultar y rellenar fecha de caducidad si es provisión
                             if (producto.tipo.trim() === 'provision') {
                                 fechaCaducidadDiv.style.display = 'block';
                                 fechaCaducidadInput.value = producto.fecha_caducidad;
@@ -589,17 +649,16 @@
                                 fechaCaducidadInput.value = '';
                             }
 
-                            // Mostrar previsualización de la imagen actual
                             if (producto.imagen_url) {
                                 imagenActualPreview.innerHTML = `<p>Imagen actual:</p><img src="${producto.imagen_url}" width="100" height="100" style="object-fit: cover;">`;
                             } else {
                                 imagenActualPreview.innerHTML = '';
                             }
-                            fotoProductoInput.value = ''; // Limpiar input de archivo
-                            eliminarImagenCheckbox.checked = false; // Desmarcar checkbox de eliminar imagen
+                            fotoProductoInput.value = '';
+                            eliminarImagenCheckbox.checked = false;
 
-                            M.updateTextFields(); // Actualizar labels
-                            modalProductoInstance.open(); // Abrir el modal
+                            M.updateTextFields();
+                            modalProductoInstance.open();
                         })
                         .catch(error => {
                             console.error("Error al cargar producto para editar (Axios):", error.response || error);
@@ -661,36 +720,28 @@
                 e.preventDefault();
                 const formData = new FormData(formProducto);
                 
-                // Asegurarse de que el tipo de producto se envíe correctamente, incluso si está deshabilitado
                 formData.set('tipo', tipoProductoSelect.value);
 
-                // Lógica para la fecha de caducidad
                 if (tipoProductoSelect.value === 'provision' && fechaCaducidadInput.value) {
                     formData.set('fecha_caducidad', fechaCaducidadInput.value);
                 } else if (tipoProductoSelect.value !== 'provision') {
                     formData.delete('fecha_caducidad');
                 }
 
-                // Lógica para la imagen
                 const fileInput = document.getElementById('fotoProducto');
                 if (fileInput.files.length > 0) {
                     formData.append('foto_producto', fileInput.files[0]);
                 } else if (isEditing && eliminarImagenCheckbox.checked) {
-                    // Si está editando y se marcó eliminar imagen, enviar vacío para que sea NULL
-                    formData.set('foto_producto', ''); // Use set to overwrite if it was already appended
+                    formData.set('foto_producto', '');
                 } else if (isEditing && fileInput.files.length === 0 && !eliminarImagenCheckbox.checked) {
-                    // If editing, no new file selected, and not deleting, remove the field
                     formData.delete('foto_producto');
                 }
 
-
                 if (isEditing) {
-                    // Lógica para actualizar producto
-                    // Ensure selectedRow is not null before accessing its dataset
                     if (!selectedRow) {
                         M.toast({html: 'Error: No hay producto seleccionado para actualizar.', classes: 'red darken-2'});
                         modalProductoInstance.close();
-                        return; // Exit the function if no row is selected
+                        return;
                     }
                     const codigoProductoToUpdate = selectedRow.dataset.id.trim();
                     formData.append('_method', 'PUT');
@@ -718,7 +769,6 @@
                             }
                         });
                 } else {
-                    // Lógica para crear producto
                     axios.post(`/api/inventario/${matriculaBuque}/productos/`, formData)
                         .then(response => {
                             const message = response.data?.message || 'Producto creado exitosamente';
@@ -748,36 +798,74 @@
             searchInput.addEventListener('input', aplicarFiltrosYRenderizar);
             filtroCategoriaSelect.addEventListener('change', aplicarFiltrosYRenderizar);
 
-            // Botón de Alertas
-            btnAlertas.addEventListener('click', function() {
-                const productosBajos = allProductos.filter(p => p.cantidad < p.stock_minimo);
-                const productosCaducados = allProductos.filter(p => {
-                    if (p.tipo.trim() === 'provision' && p.fecha_caducidad) {
+            // Funciones proporcionadas para alertas
+            function actualizarContadorAlertas() {
+                const productosBajos = todosProductos.filter(p => p.cantidad <= p.stock_minimo); 
+                const productosCaducados = todosProductos.filter(p => {
+                    if (p.tipo.trim().toLowerCase() === 'provision' && p.fecha_caducidad) { 
                         const hoy = new Date();
                         const caducidad = new Date(p.fecha_caducidad);
-                        return caducidad < hoy;
+                        hoy.setHours(0, 0, 0, 0);
+                        caducidad.setHours(0, 0, 0, 0);
+                        return caducidad <= hoy; 
+                    }
+                    return false;
+                });
+                
+                const totalAlertas = productosBajos.length + productosCaducados.length;
+                if (totalAlertas > 0) {
+                    alertasBadge.textContent = totalAlertas;
+                    alertasBadge.style.display = 'block';
+                } else {
+                    alertasBadge.textContent = '0';
+                    alertasBadge.style.display = 'none';
+                }
+            }
+
+            function mostrarAlertasModal() {
+                const productosBajos = todosProductos.filter(p => p.cantidad <= p.stock_minimo); 
+                const productosCaducados = todosProductos.filter(p => {
+                    if (p.tipo.trim().toLowerCase() === 'provision' && p.fecha_caducidad) { 
+                        const hoy = new Date();
+                        const caducidad = new Date(p.fecha_caducidad);
+                        hoy.setHours(0, 0, 0, 0);
+                        caducidad.setHours(0, 0, 0, 0);
+                        return caducidad <= hoy; 
                     }
                     return false;
                 });
 
-                let mensaje = '';
+                let mensajeAlertas = '';
+
                 if (productosBajos.length > 0) {
-                    mensaje += `Productos bajo stock mínimo (${productosBajos.length}):\n`;
-                    mensaje += productosBajos.map(p => `- ${p.nombre_producto} (${p.cantidad}/${p.stock_minimo})`).join('\n');
+                    mensajeAlertas += `<h6>Productos bajo stock mínimo (${productosBajos.length}):</h6>`;
+                    mensajeAlertas += `<ul class="collection">`;
+                    productosBajos.forEach(p => {
+                        mensajeAlertas += `<li class="collection-item"><strong>${p.nombre_producto}</strong>: Quedan ${p.cantidad} (Stock Mínimo: ${p.stock_minimo})</li>`;
+                    });
+                    mensajeAlertas += `</ul>`;
                 }
+                
                 if (productosCaducados.length > 0) {
-                    if (mensaje) mensaje += '\n\n';
-                    mensaje += `Productos caducados (${productosCaducados.length}):\n`;
-                    mensajeCaducados = productosCaducados.map(p => `- ${p.nombre_producto} (${p.fecha_caducidad})`).join('\n');
-                    mensaje += mensajeCaducados;
+                    if (mensajeAlertas) mensajeAlertas += '<br>';
+                    mensajeAlertas += `<h6>Productos caducados (${productosCaducados.length}):</h6>`;
+                    mensajeAlertas += `<ul class="collection">`;
+                    productosCaducados.forEach(p => {
+                        mensajeAlertas += `<li class="collection-item"><strong>${p.nombre_producto}</strong>: Caducado el ${p.fecha_caducidad}</li>`;
+                    });
+                    mensajeAlertas += `</ul>`;
                 }
 
-                if (mensaje) {
-                    M.toast({html: `<pre>${mensaje}</pre>`, classes: 'yellow darken-2', displayLength: 6000});
+                if (mensajeAlertas) {
+                    alertasContent.innerHTML = mensajeAlertas;
+                    alertasModalInstance.open();
                 } else {
-                    M.toast({html: 'No hay alertas de productos.', classes: 'green'});
+                    M.toast({html: 'No hay alertas de productos en este momento.', classes: 'green'});
                 }
-            });
+            }
+
+            // Evento para el botón flotante de Alertas
+            btnAlertasFab.addEventListener('click', mostrarAlertasModal);
         });
     </script>
 </body>
