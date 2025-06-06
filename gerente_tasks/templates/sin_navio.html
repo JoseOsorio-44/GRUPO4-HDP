@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navío no Asignado</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .message-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+        }
+        h1 {
+            color: #d9534f; /* Un color de advertencia */
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 25px; /* Espacio antes del botón */
+        }
+        .home-button {
+            display: inline-block;
+            background-color: #007bff; /* Color azul para el botón */
+            color: white;
+            padding: 12px 25px;
+            border-radius: 5px;
+            text-decoration: none; /* Quitar subrayado del enlace */
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+        .home-button:hover {
+            background-color: #0056b3; /* Un azul más oscuro al pasar el mouse */
+        }
+    </style>
+</head>
+<body>
+    <div class="message-container">
+        <h1>¡Atención!</h1>
+        <p>No has sido asignado a ningún navío en este momento.</p>
+        <p>Por favor, comunícate con un administrador para que te asigne a uno.</p>
+        
+        <a href="{% url 'inicio:home' %}" class="home-button">Ir a la Página Principal</a>
+    </div>
+</body>
+</html>

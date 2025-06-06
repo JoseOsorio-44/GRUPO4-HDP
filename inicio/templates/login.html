@@ -24,7 +24,7 @@
 
       <ul class="right hide-on-med-and-down">
         <li>
-          <a href="{%url 'home'%}">
+          <a href="{%url 'inicio:home'%}">
             <i class="material-icons left">arrow_back</i>Regresar
           </a>
         </li>
@@ -41,7 +41,7 @@
             <span class="card-title">Inicio de sesión</span>
 
             <!-- ====== FORMULARIO ====== -->
-            <form id="formLogin" action="{% url 'api_login' %}" method="POST">
+            <form id="formLogin" action="{% url 'inicio:api_login' %}" method="POST">
 
               {% csrf_token %}
               <div class="input-field">

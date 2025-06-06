@@ -157,14 +157,14 @@
 
 <nav class="blue darken-1">
     <div class="nav-wrapper">
-        <a href="{% url 'admin_view' %}" class="brand-logo">
+        <a href="{% url 'admin_tasks:admin_view' %}" class="brand-logo">
             <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-right: 10px; vertical-align: middle;">
             <span>OceanTrack</span>
         </a>
         <a href="#!" class="brand-logo center">Gerentes</a>
         <ul class="right hide-on-med-and-down">
-            <li><a href="{% url 'buques' %}"><i class="material-icons left">directions_boat</i>Navios</a></li>
-            <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
+            <li><a href="{% url 'admin_tasks:buques' %}"><i class="material-icons left">directions_boat</i>Navios</a></li>
+            <li><a href="{% url 'inicio:logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
         </ul>
     </div>
 </nav>
@@ -228,7 +228,7 @@
     <div id="modalGerente" class="modal">
         <div class="modal-content">
             <h5 id="modalTitulo">Agregar gerente</h5>
-            <form id="formGerente" action="{% url 'api_gerente_list_create' %}" method="post">
+            <form id="formGerente" action="{% url 'admin_tasks:api_gerente_list_create' %}" method="post">
                 {% csrf_token %}
                 <input type="hidden" id="originalCarnetGerente"> 
 

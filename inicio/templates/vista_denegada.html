@@ -69,7 +69,7 @@
                         </a>
                         {% if request.session.user_role %}
                             <p style="margin-top: 20px;">
-                                <a href="{% url 'logout' %}" class="waves-effect waves-light btn red lighten-1">Cerrar Sesión</a>
+                                <a href="{% url 'inicio:logout' %}" class="waves-effect waves-light btn red lighten-1">Cerrar Sesión</a>
                             </p>
                         {% endif %}
                     </div>

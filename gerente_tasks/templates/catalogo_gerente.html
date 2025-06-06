@@ -331,7 +331,7 @@
             <a href="#!"
             class="brand-logo center">Inventario del Buque</a>
             <ul class="right hide-on-med-and-down">
-                <li><a href="{% url 'logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
+                <li><a href="{% url 'inicio:logout' %}"><i class="material-icons right">exit_to_app</i>Salir</a></li>
             </ul>
         </div>
     </nav>
@@ -818,8 +818,7 @@
             }
 
             try {
-                // Asegúrate de que esta URL sea la correcta para tu endpoint de actualización de cantidad
-                // Necesitarás ajustar esta URL para que coincida con tu urls.py y views.py
+
           
                 const response = await axios.put(`/api/gerente/productos/${productoSeleccionado.codigo_producto}/update_cantidad/`, {
                     cantidad: newCantidad
