@@ -39,13 +39,14 @@ class Producto(models.Model):
     matricula_buque = models.ForeignKey(Buque, models.DO_NOTHING, db_column='matricula_buque', blank=True, null=True)
     carnet_admin = models.ForeignKey(Administrador, models.DO_NOTHING, db_column='carnet_admin', blank=True, null=True) # O carnet_gerente si era el caso
     nombre_producto = models.CharField(max_length=25)
-    descripcion = models.CharField(max_length=100)
+    descripcion = models.CharField(max_length=200)
     foto_producto = models.ImageField(upload_to='media/', blank=True, null=True) 
     cantidad = models.IntegerField(default=0) 
     stock_minimo = models.IntegerField()
     tipo = models.CharField(max_length=10)
     fecha_caducidad = models.DateField(blank=True, null=True)
+    medida = models.CharField(max_length=10)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'producto'

@@ -31,8 +31,6 @@ def gerente_dashboard(request):
     }
     return render(request, 'catalogo_gerente.html', context)
 
-
-
 @role_required(allowed_roles=['gerente'])
 @require_http_methods(["GET"])
 def api_productos_gerente_list(request):
@@ -67,7 +65,8 @@ def api_productos_gerente_list(request):
             'cantidad': producto.cantidad,
             'stock_minimo': producto.stock_minimo,
             'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
-            'foto_producto_url': foto_url
+            'foto_producto_url': foto_url,
+            'medida': producto.medida.strip() if producto.medida else '' # <--- Added 'medida' here
         })
         
     return JsonResponse(productos_data, safe=False)
@@ -89,7 +88,7 @@ def api_producto_gerente_detail(request, codigo_producto):
     producto = get_object_or_404(
         Producto, 
         codigo_producto=codigo_producto.strip(), # <--- .strip() aquí
-        matricula_buque__matricula_buque=matricula_buque_gerente.strip() # <--- .strip() aquí
+        matricula_buque__matricula_buque=matricula_buque_gerente
     )
 
     foto_url = None
@@ -106,6 +105,7 @@ def api_producto_gerente_detail(request, codigo_producto):
         'tipo': producto.tipo.strip(),
         'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
         'foto_producto_url': foto_url,
+        'medida': producto.medida.strip() if producto.medida else '' # <--- Added 'medida' here
     }
     return JsonResponse(producto_data)
 
@@ -125,7 +125,7 @@ def api_producto_gerente_update_cantidad(request, codigo_producto):
     producto = get_object_or_404(
         Producto, 
         codigo_producto=codigo_producto.strip(), # <--- .strip() aquí
-        matricula_buque__matricula_buque=matricula_buque_gerente.strip() # <--- .strip() aquí
+        matricula_buque__matricula_buque=matricula_buque_gerente
     )
     
     try:

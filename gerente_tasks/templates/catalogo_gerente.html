@@ -83,7 +83,7 @@
         #modalProducto {
             width: 50% !important;
             /* Ancho del modal */
-            height: 72% !important;
+            height: 75% !important;
             /* Ligeramente más grande verticalmente para la fecha */
             max-height: 95% !important;
             /* Limita la altura del modal para pantallas pequeñas */
@@ -239,7 +239,7 @@
         #fabEliminarProductoContainer,
         /* Los siguientes se ocultan con JS, pero aquí para seguridad */
         .file-field, /* Campo de carga de archivos (fotos) */
-     
+       
         #stockMinimoField /* Campo de stock mínimo en el modal */
         {
             display: none !important;
@@ -339,7 +339,7 @@
     <main>
         <div class="container">
             <div class="row">
-           
+            
                 <div class="col s12 info-navio">
                     <h5 id="nombreBuqueInfo">{{ nombre_buque }}</h5>
                 </div>
@@ -347,18 +347,18 @@
 
             <div class="row controls-row">
                 <div class="col s12 m6 input-field search-col"> 
-     
+    
                     <i class="material-icons prefix">search</i>
                     <input id="search" type="text" placeholder="Buscar producto">
                     <label for="search">Buscar</label>
                 </div>
                 <div class="col s12 m6 input-field category-col">
- 
+    
                     <select id="filtroCategoria">
                         <option value="todos" selected>Todas las categorías</option>
                         <option value="repuesto">Repuesto</option>
                         <option value="provision">Provisión</option>
-  
+    
                     </select>
                     <label>Categoría</label>
                 </div>
@@ -366,20 +366,21 @@
 
             <div class="row">
                 <div class="col s12 tabla-productos">
-  
+    
                     <table class="striped highlight responsive-table"> 
                         <thead>
                             <tr>
-                          
+                            
                                 <th></th>
                                 <th>Código</th>
                                 <th>Nombre</th>
-                              
+                            
                                 <th>Tipo</th>
                                 <th>Cantidad</th>
+                                <th>Medida</th>
                             </tr>
                         </thead>
-              
+            
                         <tbody id="tablaProductosBody">
                             </tbody>
                     </table>
@@ -394,7 +395,7 @@
             </div>
 
             <div class="fixed-action-btn alerts-fab" id="fabAlertasContainer">
-       
+        
                 <a id="fabAlertas" class="btn-floating btn-large yellow darken-2 tooltipped" data-position="left" data-tooltip="Ver Alertas">
                     <i class="large material-icons">warning</i>
                     <span class="badge new" data-badge-caption="" id="alertasBadge">0</span>
@@ -413,48 +414,52 @@
                                 <img id="productoImagen" class="product-image materialboxed" src="#" alt="Imagen del 
                                 producto" style="display: none;">
                             </div>
+                                                        <div class="input-field">
+                                <input id="tipoProducto" type="text" readonly>
+                                <label for="tipoProducto">Tipo</label>
+                            </div>
                             <div class="input-field hidden-field" id="fechaCaducidadField">
                                 <input id="fechaCaducidadProducto" type="text" readonly>
     
                                 <label for="fechaCaducidadProducto">Fecha de Caducidad</label>
                             </div>
                         </div>
-                 
+            
                         <div class="col s12 m7 product-details-container">
                             <form id="formProducto" action="" method="post">
                                 {% csrf_token %} 
-                       
+                        
                                 <input type="hidden" id="originalCantidad"> <div class="input-field">
                                     <input id="codigoProducto" type="text" readonly>
                                     <label for="codigoProducto">Código</label>
-           
+                        
                                 </div>
 
                                 <div class="input-field">
                                     <input id="nombreProducto" type="text" readonly>
-       
+            
                                     <label for="nombreProducto">Nombre</label>
                                 </div>
 
                                 <div class="input-field">
-     
+            
                                     <textarea id="descripcionProducto" class="materialize-textarea" readonly></textarea>
                                     <label for="descripcionProducto">Descripción</label>
-                             
+                            
+                                </div>
+                                
+                                {# New Measurement Unit field #}
+                                <div class="input-field">
+                                    <input id="medidaProducto" type="text" readonly>
+                                    <label for="medidaProducto">Medida</label>
                                 </div>
 
                                 <div class="input-field">
-                                    <input id="tipoProducto" type="text" readonly>
-                         
-                                    <label for="tipoProducto">Tipo</label>
-                                </div>
-
-                                <div class="input-field">
-                       
+                        
                                     <input id="cantidadProducto" type="number" min="0" required class="editable-field">
                                     <label for="cantidadProducto">Cantidad</label>
                                 </div>
-             
+                    
                             </form>
                         </div>
                     </div>
@@ -489,7 +494,7 @@
         M.AutoInit(); 
         
         // Inicializar Tooltips (para los FABs)
-     
+    
         const tooltips = document.querySelectorAll('.tooltipped');
         M.Tooltip.init(tooltips);
 
@@ -498,7 +503,7 @@
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
-         
+        
                 for (let i = 0; i < cookies.length; i++) {
                     const cookie = cookies[i].trim();
                     if (cookie.substring(0, name.length + 1) === (name + '=')) {
@@ -548,7 +553,7 @@
         const codigoProductoInput = document.getElementById('codigoProducto');
         const nombreProductoInput = document.getElementById('nombreProducto');
         const descripcionProductoInput = document.getElementById('descripcionProducto');
-        const tipoProductoInput = document.getElementById('tipoProducto');
+        const tipoProductoInput = document.getElementById('tipoProducto'); // Referencia sigue siendo necesaria
         const cantidadProductoInput = document.getElementById('cantidadProducto');
         const fechaCaducidadField = document.getElementById('fechaCaducidadField');
         const fechaCaducidadProductoInput = document.getElementById('fechaCaducidadProducto');
@@ -558,6 +563,7 @@
         // Contenedor para la imagen o icono
         const originalCantidadInput = document.getElementById('originalCantidad');
         const btnGuardarCantidad = document.getElementById('btnGuardarCantidad');
+        const medidaProductoInput = document.getElementById('medidaProducto'); 
 
         // Cargar datos iniciales al cargar la página
         cargarDatosIniciales();
@@ -602,13 +608,13 @@
             const productosFiltrados = todosProductos.filter(producto => {
                 // Filtro por nombre, descripción o CÓDIGO de producto
                 const matchesSearch = producto.nombre_producto.toLowerCase().includes(searchTerm) || 
-                                      (producto.descripcion && producto.descripcion.toLowerCase().includes(searchTerm)) || // Asegurar que descripción exista
-    
-                                      producto.codigo_producto.toLowerCase().includes(searchTerm); 
+                                     (producto.descripcion && producto.descripcion.toLowerCase().includes(searchTerm)) || // Asegurar que descripción exista
+            
+                                     producto.codigo_producto.toLowerCase().includes(searchTerm); 
                 
                 // Filtro por categoría (provisión/repuesto)
                 // Usamos String(producto.tipo).trim() para asegurar que sea una cadena sin espacios
-   
+        
                 const matchesCategory = categoriaFiltro === 'todos' || String(producto.tipo).toLowerCase().trim() === categoriaFiltro;
                 
                 // Para depuración:
@@ -625,7 +631,7 @@
                 tr.classList.add('no-data-row');
                 const message = (searchInput.value.trim() === '' && filtroCategoriaSelect.value === 'todos') ? 'No hay productos registrados en este buque.'
                 : 'No hay coincidencias para tu búsqueda o filtro.';
-                tr.innerHTML = `<td colspan="5" class="center-align">${message}</td>`;
+                tr.innerHTML = `<td colspan="6" class="center-align">${message}</td>`;
                 tablaProductosBody.appendChild(tr);
                 return;
             }
@@ -636,23 +642,24 @@
 
                 // Determinar el icono basado en el tipo de producto
                 let iconName = '';
-     
+        
                 if (producto.tipo.toLowerCase().trim() === 'provision') {
-                    iconName = 'fastfood'; // Icono para provisiones
+                    iconName = 'local_grocery_store'; // Icono para provisiones
                 } else if (producto.tipo.toLowerCase().trim() === 'repuesto') {
                     iconName = 'build'; // Icono para repuestos
-           
+            
                 } else {
                     iconName = 'label'; // Icono por defecto si el tipo no coincide o es desconocido
                 }
 
                 tr.innerHTML = `
                     <td><i class="material-icons">${iconName}</i></td>
-    
+            
                     <td>${producto.codigo_producto}</td>
                     <td>${producto.nombre_producto}</td>
                     <td>${producto.tipo.charAt(0).toUpperCase() + producto.tipo.slice(1)}</td>
                     <td>${producto.cantidad}</td>
+                    <td>${producto.medida || ''}</td>
                 `;
                 tablaProductosBody.appendChild(tr);
             });
@@ -678,10 +685,13 @@
                 if (p.tipo.trim().toLowerCase() === 'provision' && p.fecha_caducidad) { 
                     const hoy = new Date();
                     const caducidad = new Date(p.fecha_caducidad);
+                    // Asegúrate de comparar 
+                    // solo las fechas, no la hora.
+                    // Ajusta ambas fechas al inicio del día.
                     hoy.setHours(0, 0, 0, 0);
- 
                     caducidad.setHours(0, 0, 0, 0);
-                    return caducidad <= hoy; 
+                    return caducidad 
+                    <= hoy; 
                 }
                 return false;
             });
@@ -755,7 +765,7 @@
                 return;
             }
 
-      
+    
             document.querySelectorAll('#tablaProductosBody tr').forEach(row => {
                 row.classList.remove('selected');
             });
@@ -764,7 +774,7 @@
             productoSeleccionado = todosProductos.find(p => String(p.codigo_producto) === fila.dataset.codigo);
             
             if (productoSeleccionado) {
-       
+        
                 // Muestra el FAB con animación
                 fabVerInformacionContainer.style.display = 'block'; // Hacer visible el contenedor (sin animación aún)
                 // Pequeño retraso para que 'display: block' se aplique antes de iniciar la transición
@@ -798,7 +808,7 @@
             }
 
             const newCantidad = parseInt(cantidadProductoInput.value);
-   
+    
             const originalCantidad = parseInt(originalCantidadInput.value); 
 
             if (isNaN(newCantidad)) {
@@ -813,13 +823,13 @@
             }
             if (newCantidad < 0) {
                 M.toast({html: 'La cantidad no puede ser negativa.', classes: 'red'});
-          
+        
                 return;
             }
 
             try {
 
-          
+        
                 const response = await axios.put(`/api/gerente/productos/${productoSeleccionado.codigo_producto}/update_cantidad/`, {
                     cantidad: newCantidad
                 });
@@ -844,9 +854,10 @@
                 nombreProductoInput.value = producto.nombre_producto;
                 descripcionProductoInput.value = producto.descripcion || '';
                 // Manejar null/undefined
-                tipoProductoInput.value = producto.tipo;
+                tipoProductoInput.value = producto.tipo; // La referencia JS sigue siendo la misma
                 cantidadProductoInput.value = producto.cantidad;
                 originalCantidadInput.value = producto.cantidad; 
+                medidaProductoInput.value = producto.medida || '';
 
                 // Lógica para el campo de Fecha de Caducidad (ahora bajo la imagen)
                 if (producto.tipo.trim().toLowerCase() === 'provision') {

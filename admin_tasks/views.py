@@ -401,26 +401,30 @@ def api_administrador_create(request):
 
 
 
-
-
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "POST"])
 def api_productos_list_create(request, matricula_buque):
-    buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
+    # Asegúrate de que la matrícula del buque de la URL también se limpia
+    buque = get_object_or_404(Buque, matricula_buque=matricula_buque.strip())
 
     if request.method == 'GET':
         productos = Producto.objects.filter(matricula_buque=buque).order_by('nombre_producto')
         data = []
         for producto in productos:
+            foto_url = None
+            if producto.foto_producto:
+                foto_url = request.build_absolute_uri(producto.foto_producto.url).strip()
+
             data.append({
-                'codigo_producto': producto.codigo_producto, # Usamos codigo_producto (es la PK)
-                'nombre_producto': producto.nombre_producto,
-                'descripcion': producto.descripcion,
+                'codigo_producto': producto.codigo_producto.strip(),
+                'nombre_producto': producto.nombre_producto.strip(),
+                'descripcion': producto.descripcion.strip() if producto.descripcion else '',
                 'cantidad': producto.cantidad,
                 'stock_minimo': producto.stock_minimo,
-                'tipo': producto.tipo,
+                'tipo': producto.tipo.strip(),
                 'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
-                'imagen_url': producto.foto_producto.url if producto.foto_producto else None,
+                'imagen_url': foto_url,
+                'medida': producto.medida.strip() if producto.medida else '', # Aseguramos que 'medida' también se limpie
             })
         return JsonResponse(data, safe=False)
 
@@ -429,26 +433,25 @@ def api_productos_list_create(request, matricula_buque):
             data = request.POST.dict()
             files = request.FILES
 
-            # Ahora necesitamos recibir el CODIGO_PRODUCTO del frontend
             incoming_codigo_producto = data.get('codigo_producto', '').strip()
             nombre_producto = data.get('nombre_producto', '').strip()
             cantidad = data.get('cantidad')
             stock_minimo = data.get('stock_minimo')
             tipo = data.get('tipo', '').strip()
-            descripcion = data.get('descripcion', '')
-            fecha_caducidad = data.get('fecha_caducidad')
+            descripcion = data.get('descripcion', '').strip() # Aseguramos que descripción también se limpie
+            fecha_caducidad = data.get('fecha_caducidad') # No es string, no necesita strip
+            medida = data.get('medida', '').strip() 
 
-            if not all([incoming_codigo_producto, nombre_producto, cantidad, stock_minimo, tipo]):
-                return JsonResponse({'errors': {'general': ['Faltan campos obligatorios (incluyendo Código de Producto).']}}, status=400)
+            if not all([incoming_codigo_producto, nombre_producto, cantidad, stock_minimo, tipo, medida]):
+                return JsonResponse({'errors': {'general': ['Faltan campos obligatorios (incluyendo Código de Producto y Medida).']}}, status=400)
 
-            # Validar unicidad de codigo_producto (es la PK)
             if Producto.objects.filter(codigo_producto=incoming_codigo_producto).exists():
                 return JsonResponse({'errors': {'codigo_producto': ['Ya existe un producto con este código.']}}, status=400)
 
             if tipo == 'provision' and not fecha_caducidad:
                 return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para las provisiones.']}}, status=400)
 
-            admin_username = request.session.get('username')
+            admin_username = request.session.get('username').strip()
             admin_instance = None
             if admin_username:
                 try:
@@ -467,48 +470,47 @@ def api_productos_list_create(request, matricula_buque):
                 stock_minimo=stock_minimo,
                 tipo=tipo,
                 fecha_caducidad=fecha_caducidad if fecha_caducidad else None,
-                carnet_admin=admin_instance
+                carnet_admin=admin_instance,
+                medida=medida,
             )
 
             if 'foto_producto' in files:
                 new_producto.foto_producto = files['foto_producto']
             else:
-                new_producto.foto_producto = None # Set to None if no file is provided
+                new_producto.foto_producto = None
 
             new_producto.save()
             return JsonResponse({'message': 'Producto creado exitosamente'}, status=201)
 
         except Exception as e:
+            print(f"Error al crear producto: {e}")
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-
 @role_required(allowed_roles=['admin'])
 @require_http_methods(["GET", "POST"])
-def api_producto_detail_update_delete(request, matricula_buque, codigo_producto_url): # Usamos codigo_producto_url
+def api_producto_detail_update_delete(request, matricula_buque, codigo_producto_url):
     buque = get_object_or_404(Buque, matricula_buque=matricula_buque)
-    # Buscamos por codigo_producto, que es la PK
     producto = get_object_or_404(Producto, codigo_producto=codigo_producto_url.strip())
 
     if request.method == 'POST' and request.POST.get('_method') == 'PUT':
         try:
             data = request.POST.dict()
 
-            # El código de producto no se cambia al actualizar (es la PK)
             nombre_producto = data.get('nombre_producto', producto.nombre_producto).strip()
             descripcion = data.get('descripcion', producto.descripcion).strip()
             cantidad = data.get('cantidad', producto.cantidad)
             stock_minimo = data.get('stock_minimo', producto.stock_minimo)
-            # 'tipo' is intentionally not updated here as per request
-            # tipo = data.get('tipo', producto.tipo).strip()
             fecha_caducidad = data.get('fecha_caducidad')
             eliminar_imagen = data.get('eliminar_imagen_checkbox') == 'true'
 
-            if not all([nombre_producto, cantidad, stock_minimo]): # 'tipo' removed from required fields for update
+            # No se actualiza 'tipo' ni 'medida' en esta vista, se mantienen como estaban
+            # ya que la lógica lo requiere como lectura para la edición.
+
+            if not all([nombre_producto, cantidad, stock_minimo]):
                 return JsonResponse({'errors': {'general': ['Faltan campos obligatorios para actualizar.']}}, status=400)
 
-            # Use producto.tipo for validation since it's not being updated
             if producto.tipo == 'provision' and not fecha_caducidad:
                 return JsonResponse({'errors': {'fecha_caducidad': ['La fecha de caducidad es obligatoria para provisiones.']}}, status=400)
 
@@ -522,12 +524,10 @@ def api_producto_detail_update_delete(request, matricula_buque, codigo_producto_
                 except Exception as e:
                     return JsonResponse({'error': str(e)}, status=500)
 
-            # No se actualiza producto.codigo_producto aquí, solo los otros campos
             producto.nombre_producto = nombre_producto
             producto.descripcion = descripcion
             producto.cantidad = cantidad
             producto.stock_minimo = stock_minimo
-            # producto.tipo = tipo # This line is commented out to make it read-only for updates
             producto.fecha_caducidad = fecha_caducidad if fecha_caducidad else None
             producto.carnet_admin = admin_instance
 
@@ -554,8 +554,6 @@ def api_producto_detail_update_delete(request, matricula_buque, codigo_producto_
                         pass
                 producto.foto_producto = request.FILES['foto_producto']
             elif not request.FILES and not eliminar_imagen:
-                # If no new file is uploaded and delete checkbox is not checked, keep current image.
-                # Do nothing, as producto.foto_producto already holds the current image.
                 pass
             
             producto.save()
@@ -584,7 +582,7 @@ def api_producto_detail_update_delete(request, matricula_buque, codigo_producto_
 
     elif request.method == 'GET':
         producto_data = {
-            'codigo_producto': producto.codigo_producto, # Usamos codigo_producto (es la PK)
+            'codigo_producto': producto.codigo_producto,
             'nombre_producto': producto.nombre_producto,
             'descripcion': producto.descripcion,
             'cantidad': producto.cantidad,
@@ -592,6 +590,7 @@ def api_producto_detail_update_delete(request, matricula_buque, codigo_producto_
             'tipo': producto.tipo,
             'fecha_caducidad': producto.fecha_caducidad.strftime('%Y-%m-%d') if producto.fecha_caducidad else None,
             'imagen_url': producto.foto_producto.url if producto.foto_producto else None,
+            'medida': producto.medida, 
         }
         return JsonResponse(producto_data)
 

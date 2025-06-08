@@ -193,6 +193,7 @@
                             <th>Tipo</th>
                             <th>Cantidad</th>
                             <th>Stock Mínimo</th>
+                            <th>Medida</th> {# Columna de medida a la derecha de Stock Mínimo #}
                         </tr>
                     </thead>
                     <tbody id="tablaProductosBody">
@@ -225,7 +226,6 @@
                 <i class="material-icons">edit</i>
             </a>
         </div>
-
         <div id="modalProducto" class="modal">
             <div class="modal-content">
                 <h4><span id="modalTitle">Nuevo Producto</span></h4>
@@ -252,6 +252,19 @@
                         <div class="input-field col s6">
                             <input id="stockMinimo" type="number" name="stock_minimo" required min="0">
                             <label for="stockMinimo">Stock Mínimo</label>
+                        </div>
+                        <div class="input-field col s12">
+                            <select id="medidaProducto" name="medida" required>
+                                <option value="" disabled selected>Selecciona la medida</option>
+                                <option value="Unidad(es)">Unidad(es)</option>
+                                <option value="Libra(as)">Libra(as)</option>
+                                <option value="Litro(os)">Litro(os)</option>
+                                <option value="Caja(s)">Caja(s)</option>
+                                <option value="Paquete(s)">Paquete(s)</option>
+                                <option value="Galon(es)">Galon(es)</option>
+                                <option value="Metro(s)">Metro(s)</option>
+                            </select>
+                            <label>Unidad de Medida</label>
                         </div>
                         <div class="input-field col s12">
                             <select id="tipoProducto" name="tipo" required>
@@ -316,6 +329,7 @@
         </div>
 
     </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Inicialización de Modales
@@ -332,7 +346,7 @@
             const alertasModalInstance = M.Modal.init(modalAlertasElem);
 
 
-            // Inicialización de selects
+            // Inicialización de selects (Materialize)
             var elemsSelect = document.querySelectorAll('select');
             M.FormSelect.init(elemsSelect);
 
@@ -365,6 +379,7 @@
             const cantidadInput = document.getElementById('cantidad');
             const stockMinimoInput = document.getElementById('stockMinimo');
             const tipoProductoSelect = document.getElementById('tipoProducto');
+            const medidaProductoSelect = document.getElementById('medidaProducto'); // Referencia al nuevo select de medida
             const fechaCaducidadInput = document.getElementById('fechaCaducidad');
             const fechaCaducidadDiv = document.querySelector('.fecha-caducidad');
             const fotoProductoInput = document.getElementById('fotoProducto');
@@ -383,6 +398,7 @@
             let todosProductos = [];
             let selectedRow = null;
             let isEditing = false;
+            // Asegúrate de que matriculaBuque sea una variable de contexto de Django que se pase al template
             const matriculaBuque = "{{ buque.matricula_buque }}";
 
             // NUEVA VARIABLE DE ESTADO PARA CONTROLAR EL DATEPICKER
@@ -392,14 +408,11 @@
             function showFabButtons() {
                 fabEditarProductoContainer.style.display = 'block';
                 fabEliminarProductoContainer.style.display = 'block';
-                // fabAlertasContainer.style.display = 'block'; // El de alertas ya está siempre visible
                 setTimeout(() => {
                     fabEditarProductoContainer.style.opacity = '1';
                     fabEditarProductoContainer.style.transform = 'translateY(0)';
                     fabEliminarProductoContainer.style.opacity = '1';
                     fabEliminarProductoContainer.style.transform = 'translateY(0)';
-                    // fabAlertasContainer.style.opacity = '1'; // Ya está siempre visible
-                    // fabAlertasContainer.style.transform = 'translateY(0)'; // Ya está siempre visible
                 }, 50);
             }
 
@@ -479,9 +492,11 @@
                             M.toast({html: 'Error al cargar productos: ' + errorMessage, classes: 'red darken-2'});
                         } catch (toastError) {
                             console.error("Error al mostrar toast:", toastError);
-                            alert('Error al cargar productos. Consulta la consola para más detalles.');
+                            // En un entorno real, usarías un modal o un mensaje dentro de la UI
+                            // alert('Error al cargar productos. Consulta la consola para más detalles.'); 
                         }
-                        tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">Error al cargar productos.</td></tr>`;
+                        // Aseguramos que la tabla no se rompa visualmente si hay un error
+                        tablaProductosBody.innerHTML = `<tr><td colspan="7" class="center-align">Error al cargar productos.</td></tr>`;
                         actualizarContadorAlertas(); 
                     });
             }
@@ -511,12 +526,12 @@
                 tablaProductosBody.innerHTML = '';
 
                 if (todosProductos.length === 0) {
-                    tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">No hay productos registrados en este buque.</td></tr>`;
+                    tablaProductosBody.innerHTML = `<tr><td colspan="7" class="center-align">No hay productos registrados en este buque.</td></tr>`;
                     return;
                 }
 
                 if (productosAmostrar.length === 0) {
-                    tablaProductosBody.innerHTML = `<tr><td colspan="6" class="center-align">No hay productos que coincidan con la búsqueda o el filtro.</td></tr>`;
+                    tablaProductosBody.innerHTML = `<tr><td colspan="7" class="center-align">No hay productos que coincidan con la búsqueda o el filtro.</td></tr>`;
                     return;
                 }
 
@@ -524,43 +539,27 @@
                     const row = document.createElement('tr');
                     row.setAttribute('data-id', producto.codigo_producto);
                     row.innerHTML = `
-                        <td><i class="material-icons">${producto.tipo.trim() === 'provision' ? 'fastfood' : 'build'}</i></td>
+                        <td><i class="material-icons">${producto.tipo.trim() === 'provision' ? 'local_grocery_store' : 'build'}</i></td>
                         <td>${producto.codigo_producto}</td>
                         <td>${producto.nombre_producto}</td>
                         <td>${producto.tipo.trim() === 'provision' ? 'Provisión' : 'Repuesto'}</td>
                         <td>${producto.cantidad}</td>
                         <td>${producto.stock_minimo}</td>
+                        <td>${producto.medida || 'N/A'}</td> {# Mostrar la medida #}
                     `;
+                    row.addEventListener('click', function() {
+                        // Deseleccionar todas las filas primero
+                        document.querySelectorAll('#tablaProductosBody tr').forEach(r => {
+                            r.classList.remove('selected');
+                        });
+                        // Seleccionar la fila actual
+                        selectedRow = row;
+                        selectedRow.classList.add('selected');
+                        showFabButtons();
+                    });
                     tablaProductosBody.appendChild(row);
                 });
-                resetSeleccion();
-            }
-
-            // Evento para seleccionar una fila de la tabla
-            tablaProductosBody.addEventListener('click', function(e) {
-                let row = e.target.closest('tr');
-                if (!row || row.classList.contains('center-align')) { 
-                    resetSeleccion();
-                    return;
-                }
-
-                document.querySelectorAll('#tablaProductosBody tr').forEach(r => {
-                    r.classList.remove('selected');
-                });
-
-                selectedRow = row;
-                selectedRow.classList.add('selected');
-                
-                showFabButtons();
-            });
-
-            // Función para resetear la selección de la fila
-            function resetSeleccion() {
-                if (selectedRow) {
-                    selectedRow.classList.remove('selected');
-                }
-                selectedRow = null;
-                hideFabButtons();
+                resetSeleccion(); // Deseleccionar cualquier fila después de renderizar
             }
 
             // Evento para deseleccionar una fila al hacer clic fuera de la tabla/FAB/modal/datepicker
@@ -577,12 +576,21 @@
                     return; // No deseleccionar si el modal de edición está abierto o el datepicker está activo
                 }
 
-                if (!clickedInsideTable && !clickedInsideFabContainer && selectedRow) {
-                    // Si el clic no fue en la tabla, ni en un FAB, ni en el modal de producto (ya cubierto por modalProductoInstance.isOpen)
-                    // Y hay una fila seleccionada, reseteamos la selección.
+                if (!clickedInsideTable && !clickedInsideFabContainer && !clickedInsideModal && selectedRow) {
+                    // Si el clic no fue en la tabla, ni en un FAB, ni en el modal,
+                    // y hay una fila seleccionada, reseteamos la selección.
                     resetSeleccion();
                 }
             });
+
+            // Función para resetear la selección de la fila (oculta FABs de editar/eliminar)
+            function resetSeleccion() {
+                if (selectedRow) {
+                    selectedRow.classList.remove('selected');
+                }
+                selectedRow = null;
+                hideFabButtons();
+            }
 
 
             // Botón "Agregar Producto" en el FAB
@@ -591,21 +599,28 @@
                 modalTitle.textContent = 'Nuevo Producto';
                 formProducto.reset();
 
-                tipoProductoSelect.removeAttribute('disabled');
-                const selectInstance = M.FormSelect.getInstance(tipoProductoSelect);
-                if (selectInstance) {
-                    selectInstance.destroy();
-                }
-                tipoProductoSelect.value = '';
-                M.FormSelect.init(tipoProductoSelect);
+                // Habilitar y reinicializar selects para crear
+                codigoProductoInput.readOnly = false; // El código de producto es editable al crear
 
-                codigoProductoInput.readOnly = false;
+                tipoProductoSelect.removeAttribute('disabled');
+                medidaProductoSelect.removeAttribute('disabled'); // Habilitar select de medida
+                
+                M.FormSelect.getInstance(tipoProductoSelect)?.destroy();
+                M.FormSelect.getInstance(medidaProductoSelect)?.destroy(); // Destruir instancia de medida
+                
+                tipoProductoSelect.value = '';
+                medidaProductoSelect.value = ''; // Limpiar valor de medida
+                
+                M.FormSelect.init(tipoProductoSelect);
+                M.FormSelect.init(medidaProductoSelect); // Reinicializar select de medida
+
+
                 fechaCaducidadDiv.style.display = 'none';
                 fechaCaducidadInput.value = '';
                 imagenActualPreview.innerHTML = '';
                 eliminarImagenCheckbox.checked = false;
                 eliminarImagenCheckbox.parentElement.style.display = 'none';
-                M.updateTextFields();
+                M.updateTextFields(); // Actualizar el estado de los labels de Materialize
                 modalProductoInstance.open();
             });
 
@@ -615,8 +630,8 @@
                     isEditing = true;
                     modalTitle.textContent = 'Editar Producto';
                     formProducto.reset();
-                    codigoProductoInput.readOnly = true;
-                    
+                    codigoProductoInput.readOnly = true; // El código de producto no se edita
+
                     const codigoProducto = selectedRow.dataset.id.trim();
                     
                     eliminarImagenCheckbox.parentElement.style.display = 'block';
@@ -630,13 +645,17 @@
                             cantidadInput.value = producto.cantidad;
                             stockMinimoInput.value = producto.stock_minimo;
                             
+                            // Tipo de producto en modo lectura
                             tipoProductoSelect.setAttribute('disabled', 'disabled');
-                            const selectInstance = M.FormSelect.getInstance(tipoProductoSelect);
-                            if (selectInstance) {
-                                selectInstance.destroy();
-                            }
+                            M.FormSelect.getInstance(tipoProductoSelect)?.destroy(); // Destruir instancia
                             tipoProductoSelect.value = producto.tipo ? String(producto.tipo).trim() : '';
-                            M.FormSelect.init(tipoProductoSelect);
+                            M.FormSelect.init(tipoProductoSelect); // Reinicializar para mostrar el valor
+
+                            // Medida de producto en modo lectura
+                            medidaProductoSelect.setAttribute('disabled', 'disabled'); // Deshabilitar select de medida
+                            M.FormSelect.getInstance(medidaProductoSelect)?.destroy(); // Destruir instancia de medida
+                            medidaProductoSelect.value = producto.medida ? String(producto.medida).trim() : ''; // Precargar valor de medida
+                            M.FormSelect.init(medidaProductoSelect); // Reinicializar select de medida
 
                             if (producto.tipo.trim() === 'provision') {
                                 fechaCaducidadDiv.style.display = 'block';
@@ -654,7 +673,7 @@
                             fotoProductoInput.value = '';
                             eliminarImagenCheckbox.checked = false;
 
-                            M.updateTextFields();
+                            M.updateTextFields(); // Actualizar el estado de los labels de Materialize
                             modalProductoInstance.open();
                         })
                         .catch(error => {
@@ -663,7 +682,7 @@
                                 const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar producto.';
                                 M.toast({html: 'Error al cargar producto: ' + errorMessage, classes: 'red darken-2'});
                             } catch (toastError) {
-                                alert('Error al cargar producto para editar. Consulta la consola para más detalles.');
+                                console.error("Error al mostrar toast:", toastError);
                             }
                         });
                 } else {
@@ -675,7 +694,7 @@
             btnEliminarProductoFab.addEventListener('click', function() {
                 if (selectedRow) {
                     const codigoProducto = selectedRow.dataset.id.trim();
-                    const nombreProducto = selectedRow.cells[2].textContent;
+                    const nombreProducto = selectedRow.cells[2].textContent; // Nombre del producto en la columna 2
                     
                     productoToDeleteNameSpan.textContent = nombreProducto;
                     productoToDeleteIdSpan.textContent = codigoProducto;
@@ -705,7 +724,7 @@
                                 const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al eliminar producto.';
                                 M.toast({html: 'Error al eliminar producto: ' + errorMessage, classes: 'red darken-2'});
                             } catch (toastError) {
-                                alert('Error al eliminar producto. Consulta la consola para más detalles.');
+                                console.error("Error al mostrar toast:", toastError);
                             }
                             confirmDeleteProductoModalInstance.close();
                         });
@@ -717,20 +736,24 @@
                 e.preventDefault();
                 const formData = new FormData(formProducto);
                 
+                // Aseguramos que los valores de los selects, incluso si están disabled, se envíen
+                // Para el caso de tipo, como no se edita, se usa el valor que se precargó.
                 formData.set('tipo', tipoProductoSelect.value);
+                formData.set('medida', medidaProductoSelect.value); // Añadir el valor de medida
 
                 if (tipoProductoSelect.value === 'provision' && fechaCaducidadInput.value) {
                     formData.set('fecha_caducidad', fechaCaducidadInput.value);
                 } else if (tipoProductoSelect.value !== 'provision') {
-                    formData.delete('fecha_caducidad');
+                    formData.delete('fecha_caducidad'); // Eliminar si no es provisión
                 }
 
                 const fileInput = document.getElementById('fotoProducto');
                 if (fileInput.files.length > 0) {
                     formData.append('foto_producto', fileInput.files[0]);
                 } else if (isEditing && eliminarImagenCheckbox.checked) {
-                    formData.set('foto_producto', '');
+                    formData.set('foto_producto', ''); // Si se marca eliminar, enviar vacío
                 } else if (isEditing && fileInput.files.length === 0 && !eliminarImagenCheckbox.checked) {
+                    // Si no se sube nueva imagen y no se marca eliminar, no enviar el campo de foto
                     formData.delete('foto_producto');
                 }
 
@@ -741,7 +764,7 @@
                         return;
                     }
                     const codigoProductoToUpdate = selectedRow.dataset.id.trim();
-                    formData.append('_method', 'PUT');
+                    formData.append('_method', 'PUT'); // Simular PUT con POST
 
                     axios.post(`/api/inventario/${matriculaBuque}/productos/${codigoProductoToUpdate}/`, formData)
                         .then(response => {
@@ -762,10 +785,10 @@
                                     M.toast({html: 'Error al actualizar producto: ' + errorMessage, classes: 'red darken-2'});
                                 }
                             } catch (toastError) {
-                                alert('Error al actualizar producto. Consulta la consola para más detalles.');
+                                console.error("Error al mostrar toast:", toastError);
                             }
                         });
-                } else {
+                } else { // Creación
                     axios.post(`/api/inventario/${matriculaBuque}/productos/`, formData)
                         .then(response => {
                             const message = response.data?.message || 'Producto creado exitosamente';
@@ -785,7 +808,7 @@
                                     M.toast({html: 'Error al crear producto: ' + errorMessage, classes: 'red darken-2'});
                                 }
                             } catch (toastError) {
-                                alert('Error al crear producto. Consulta la consola para más detalles.');
+                                console.error("Error al mostrar toast:", toastError);
                             }
                         });
                 }
