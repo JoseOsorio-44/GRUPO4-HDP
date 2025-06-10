@@ -9,9 +9,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style>
-        .tabla-navios {
-            margin-top: 20px;
-        }
+        
         .tabla-navios tr.selected {
             background-color: #e3f2fd !important; /* Materialize Light Blue accent-1 */
         }
@@ -101,7 +99,7 @@
 
 <nav class="blue darken-1">
     <div class="nav-wrapper">
-        <a href="{% url 'admin_tasks:admin_view' %}" class="brand-logo">
+        <a href="{% url 'admin_tasks:admin_view' %}" class="brand-logo" style="padding-left: 15px;">
             <img src="{% static 'images/LogoB.png' %}" alt="OceanTrack" style="height:55px; margin-right: 10px; vertical-align: middle;">
             <span>OceanTrack</span>
         </a>
