@@ -539,7 +539,7 @@
                     const row = document.createElement('tr');
                     row.setAttribute('data-id', producto.codigo_producto);
                     row.innerHTML = `
-                        <td><i class="material-icons">${producto.tipo.trim() === 'provision' ? 'local_grocery_store' : 'build'}</i></td>
+                        <td><i class="material-icons">${producto.tipo.trim() === 'provision' ? 'local_drink' : 'build'}</i></td>
                         <td>${producto.codigo_producto}</td>
                         <td>${producto.nombre_producto}</td>
                         <td>${producto.tipo.trim() === 'provision' ? 'Provisión' : 'Repuesto'}</td>
